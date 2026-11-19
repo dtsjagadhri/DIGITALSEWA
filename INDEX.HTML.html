@@ -1,0 +1,2462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Digital Seva Kendra — 3-Step Online Sarkari Seva Portal</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- QR code generator (renders fully client-side, no network call) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif']
+          }
+        }
+      }
+    };
+  </script>
+  <style>
+    /* Smooth step fade transition */
+    @keyframes stepFadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(6px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    .step-animate {
+      animation: stepFadeIn 0.25s ease-out;
+    }
+
+    /* Clean Print Styles for Digital Receipt */
+    @media print {
+      body * {
+        visibility: hidden;
+      }
+      #receiptModal,
+      #receiptModal * {
+        visibility: visible;
+      }
+      #receiptModal {
+        position: absolute !important;
+        inset: 0 !important;
+        background: #ffffff !important;
+        padding: 0 !important;
+        display: block !important;
+      }
+      #receiptCard {
+        box-shadow: none !important;
+        border: 1px solid #cbd5e1 !important;
+        max-width: 100% !important;
+        margin: 0 auto !important;
+      }
+      .no-print {
+        display: none !important;
+      }
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans antialiased min-h-screen flex flex-col selection:bg-blue-100 selection:text-blue-900">
+
+  <!-- ===================================================================== -->
+  <!-- TOAST NOTIFICATION CONTAINER (Replaces alert)                         -->
+  <!-- ===================================================================== -->
+  <div id="toastContainer" style="z-index: 10050;" class="fixed top-4 right-4 flex flex-col gap-2 max-w-xs sm:max-w-sm w-full pointer-events-none px-4 sm:px-0 no-print"></div>
+
+  <!-- ===================================================================== -->
+  <!-- HEADER / NAVIGATION BAR                                               -->
+  <!-- ===================================================================== -->
+  <header class="bg-white/95 backdrop-blur-md border-b border-slate-200 sticky top-0 z-40 no-print">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-3">
+      <!-- Brand Identity -->
+      <div class="flex items-center gap-3 min-w-0">
+        <div class="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-gradient-to-br from-blue-700 to-indigo-700 flex items-center justify-center text-white shadow-sm shrink-0">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
+          </svg>
+        </div>
+        <div class="min-w-0">
+          <h1 id="headerShopName" class="text-base sm:text-lg font-extrabold text-slate-900 tracking-tight truncate">Digital Seva Kendra</h1>
+          <p class="text-xs text-slate-500 font-medium truncate">Online Sarkari Seva Portal</p>
+        </div>
+      </div>
+
+      <!-- Password-Protected Admin Panel Button -->
+      <button
+        type="button"
+        id="openAdminBtn"
+        class="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-slate-900 hover:bg-blue-700 active:scale-[0.98] text-white text-xs sm:text-sm font-semibold shadow-sm transition-all shrink-0 cursor-pointer"
+      >
+        <svg class="w-4 h-4 text-blue-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+        </svg>
+        <span>Admin Panel</span>
+        <span id="headerAppCount" style="display: none;" class="px-1.5 py-0.5 text-[10px] font-bold rounded-full bg-blue-500 text-white">0</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- ===================================================================== -->
+  <!-- MAIN CONTENT: HERO + 3-STEP WIZARD CARD                               -->
+  <!-- ===================================================================== -->
+  <main class="flex-1 no-print">
+    <!-- Hero Banner -->
+    <section class="bg-gradient-to-br from-blue-700 via-blue-800 to-indigo-900 text-white pt-7 pb-14 px-4 sm:px-6">
+      <div class="max-w-3xl mx-auto text-center">
+        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-white/20 text-blue-100 text-xs font-medium mb-3">
+          <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+          Simple 3-Step Digital Process
+        </div>
+        <h2 class="text-2xl sm:text-3xl font-extrabold tracking-tight mb-1.5">
+          Online Sarkari Kaam Karwayein Aasani Se
+        </h2>
+        <p class="text-blue-100/90 text-xs sm:text-sm max-w-xl mx-auto">
+          Step 1 me apni jankari aur service chunein, Step 2 me zaroori document upload karein, aur Step 3 me QR scan karke fees jama karein.
+        </p>
+      </div>
+    </section>
+
+    <!-- 3-Step Wizard Container -->
+    <section class="max-w-3xl mx-auto px-4 sm:px-6 -mt-8 mb-14">
+      <div class="bg-white rounded-2xl shadow-xl shadow-slate-200/80 border border-slate-200 overflow-hidden">
+
+        <!-- =============================================================== -->
+        <!-- TOP 3-STEP PROGRESS BAR                                         -->
+        <!-- =============================================================== -->
+        <div class="bg-slate-50/90 border-b border-slate-200 px-4 sm:px-8 py-5">
+          <div class="flex items-center justify-between max-w-xl mx-auto">
+            <!-- Step 1 Indicator -->
+            <div class="flex flex-col items-center text-center gap-1.5 flex-1">
+              <div id="stepDot1" class="w-9 h-9 rounded-full bg-blue-700 text-white font-bold text-sm flex items-center justify-center shadow-sm ring-4 ring-blue-100 transition-all">1</div>
+              <span id="stepLabel1" class="text-[11px] sm:text-xs font-bold text-blue-700 leading-tight">Customer Info<br class="sm:hidden" /> &amp; Service</span>
+            </div>
+
+            <!-- Connector 1-2 -->
+            <div class="flex-1 max-w-[70px] sm:max-w-[110px] h-1 rounded-full bg-slate-200 -mt-5 overflow-hidden">
+              <div id="stepLine1" class="h-full bg-emerald-500 transition-all duration-300" style="width: 0%;"></div>
+            </div>
+
+            <!-- Step 2 Indicator -->
+            <div class="flex flex-col items-center text-center gap-1.5 flex-1">
+              <div id="stepDot2" class="w-9 h-9 rounded-full bg-slate-200 text-slate-500 font-bold text-sm flex items-center justify-center transition-all">2</div>
+              <span id="stepLabel2" class="text-[11px] sm:text-xs font-semibold text-slate-500 leading-tight">File<br class="sm:hidden" /> Upload</span>
+            </div>
+
+            <!-- Connector 2-3 -->
+            <div class="flex-1 max-w-[70px] sm:max-w-[110px] h-1 rounded-full bg-slate-200 -mt-5 overflow-hidden">
+              <div id="stepLine2" class="h-full bg-emerald-500 transition-all duration-300" style="width: 0%;"></div>
+            </div>
+
+            <!-- Step 3 Indicator -->
+            <div class="flex flex-col items-center text-center gap-1.5 flex-1">
+              <div id="stepDot3" class="w-9 h-9 rounded-full bg-slate-200 text-slate-500 font-bold text-sm flex items-center justify-center transition-all">3</div>
+              <span id="stepLabel3" class="text-[11px] sm:text-xs font-semibold text-slate-500 leading-tight">Fee<br class="sm:hidden" /> Deposit</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- =============================================================== -->
+        <!-- WIZARD FORM BODY                                                -->
+        <!-- =============================================================== -->
+        <form id="applicationForm" novalidate class="p-5 sm:p-8">
+
+          <!-- ============================================================= -->
+          <!-- STEP 1: CUSTOMER INFORMATION & SELECT SERVICE                 -->
+          <!-- ============================================================= -->
+          <div id="wizardStep1" class="step-animate space-y-6">
+            <div>
+              <h3 class="text-lg sm:text-xl font-extrabold text-slate-900">Step 1: Customer Information &amp; Service</h3>
+              <p class="text-xs sm:text-sm text-slate-500 mt-0.5">Apna pura naam, 10-digit mobile number aur sarkari kaam chunein</p>
+            </div>
+
+            <!-- Customer Name & Mobile -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label for="customerName" class="block text-sm font-semibold text-slate-700 mb-1.5">
+                  Customer Full Name (Pura Naam) <span class="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  id="customerName"
+                  placeholder="e.g. Rahul Kumar"
+                  class="w-full px-4 py-3 rounded-xl border border-slate-300 focus:border-blue-600 focus:ring-4 focus:ring-blue-100 outline-none transition-all text-sm bg-white"
+                />
+                <p id="errName" style="display: none;" class="mt-1.5 text-xs text-red-600 font-medium">Please enter your full name.</p>
+              </div>
+
+              <div>
+                <label for="customerMobile" class="block text-sm font-semibold text-slate-700 mb-1.5">
+                  Mobile Number (10 Digits) <span class="text-red-500">*</span>
+                </label>
+                <div class="relative flex items-center">
+                  <span class="absolute left-3.5 text-sm font-semibold text-slate-500 select-none">+91</span>
+                  <input
+                    type="tel"
+                    id="customerMobile"
+                    maxlength="10"
+                    inputmode="numeric"
+                    placeholder="10-digit mobile number"
+                    class="w-full pl-12 pr-4 py-3 rounded-xl border border-slate-300 focus:border-blue-600 focus:ring-4 focus:ring-blue-100 outline-none transition-all text-sm bg-white tracking-wide"
+                  />
+                </div>
+                <p id="errMobile" style="display: none;" class="mt-1.5 text-xs text-red-600 font-medium">Please enter a valid 10-digit mobile number.</p>
+              </div>
+            </div>
+
+            <!-- Select Service Dropdown -->
+            <div>
+              <label for="serviceSelect" class="block text-sm font-semibold text-slate-700 mb-1.5">
+                Select Service (Kaam Chunein) <span class="text-red-500">*</span>
+              </label>
+              <select
+                id="serviceSelect"
+                class="w-full px-4 py-3 rounded-xl border border-slate-300 focus:border-blue-600 focus:ring-4 focus:ring-blue-100 outline-none transition-all text-sm font-medium bg-white"
+              >
+                <option value="">-- Select Service --</option>
+                <option value="red_cross">Red Cross Certificate for Driving Licence (₹650)</option>
+                <option value="heavy_file">Heavy Driving Licence File (₹700)</option>
+                <option value="heavy_fee">Heavy Licence Fee (Select Part Below)</option>
+                <option value="heavy_absent">Heavy Licence Training Absent Fees (Gen/OBC ₹1,600 | SC ₹850)</option>
+                <option value="pan_card">PAN Card (₹250)</option>
+                <option value="aadhaar_service">Aadhaar Card / Update (₹100)</option>
+                <option value="income_cert">Income / Caste / Domicile Certificate (₹150)</option>
+                <option value="other_service">Other Sarkari Kaam (Custom Amount)</option>
+              </select>
+              <p id="errService" style="display: none;" class="mt-1.5 text-xs text-red-600 font-medium">Please select a service to continue.</p>
+            </div>
+
+            <!-- Conditional: Heavy Licence Fee (2 Sub-Parts) -->
+            <div id="heavyFeePartSection" style="display: none;" class="bg-blue-50/70 border border-blue-200 rounded-2xl p-4 sm:p-5 space-y-3">
+              <div class="flex items-center justify-between gap-2">
+                <div>
+                  <h4 class="text-sm font-bold text-slate-900">Heavy Licence Fee — Select Part <span class="text-red-500">*</span></h4>
+                  <p class="text-xs text-slate-600">Training Fee ya RTO Fees me se ek part chunein</p>
+                </div>
+                <span class="px-2.5 py-1 rounded-full bg-blue-100 text-blue-800 text-[11px] font-bold shrink-0">2 Parts</span>
+              </div>
+
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <label id="cardTrainingFee" class="flex items-start gap-3 p-4 rounded-xl border-2 border-slate-200 bg-white hover:border-blue-400 cursor-pointer transition-all">
+                  <input type="radio" name="heavyFeePart" value="training_fee" class="mt-1 w-4 h-4 text-blue-700 shrink-0" />
+                  <div class="flex-1 min-w-0">
+                    <p class="text-sm font-bold text-slate-900">Training Fee with Learner Licence</p>
+                    <p class="text-xs text-slate-500 mt-0.5">Requires Training Slip photo</p>
+                    <div class="flex flex-wrap gap-1.5 mt-2">
+                      <span class="px-2 py-0.5 rounded-lg bg-blue-50 text-blue-700 text-[11px] font-extrabold">Gen/OBC: ₹3,600</span>
+                      <span class="px-2 py-0.5 rounded-lg bg-indigo-50 text-indigo-700 text-[11px] font-extrabold">SC: ₹2,100</span>
+                    </div>
+                  </div>
+                </label>
+
+                <label id="cardRtoFee" class="flex items-start gap-3 p-4 rounded-xl border-2 border-slate-200 bg-white hover:border-blue-400 cursor-pointer transition-all">
+                  <input type="radio" name="heavyFeePart" value="rto_fee" class="mt-1 w-4 h-4 text-blue-700 shrink-0" />
+                  <div class="flex-1 min-w-0">
+                    <p class="text-sm font-bold text-slate-900">RTO Fees after Training</p>
+                    <p class="text-xs text-slate-500 mt-0.5">No document upload required</p>
+                    <span class="inline-block mt-2 px-2.5 py-0.5 rounded-lg bg-emerald-50 text-emerald-700 text-xs font-extrabold">₹1,450</span>
+                  </div>
+                </label>
+              </div>
+              <p id="errHeavyPart" style="display: none;" class="text-xs text-red-600 font-medium">Please select Training Fee or RTO Fees.</p>
+            </div>
+
+            <!-- Conditional: Candidate Category Selector (Gen/OBC vs SC) -->
+            <div id="categorySection" style="display: none;" class="bg-indigo-50/70 border border-indigo-200 rounded-2xl p-4 sm:p-5 space-y-3">
+              <div class="flex items-center justify-between gap-2">
+                <div>
+                  <h4 id="categorySectionTitle" class="text-sm font-bold text-slate-900">Select Candidate Category <span class="text-red-500">*</span></h4>
+                  <p class="text-xs text-slate-600">Apni category chunein — fee apne aap update ho jayegi</p>
+                </div>
+                <span class="px-2.5 py-1 rounded-full bg-indigo-100 text-indigo-800 text-[11px] font-bold shrink-0">Category</span>
+              </div>
+
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <label id="cardCatGenObc" class="flex items-center justify-between gap-3 p-4 rounded-xl border-2 border-slate-200 bg-white hover:border-blue-500 cursor-pointer transition-all">
+                  <div class="flex items-center gap-3 min-w-0">
+                    <input type="radio" name="candidateCategory" value="gen_obc" class="w-4 h-4 text-blue-700 shrink-0" />
+                    <div class="min-w-0">
+                      <p class="text-sm font-bold text-slate-900">General / OBC Candidate</p>
+                      <p class="text-xs text-slate-500">Standard category fee</p>
+                    </div>
+                  </div>
+                  <span id="catGenObcPriceBadge" class="px-3 py-1 rounded-lg bg-blue-50 text-blue-700 text-sm font-extrabold shrink-0">₹3,600</span>
+                </label>
+
+                <label id="cardCatSc" class="flex items-center justify-between gap-3 p-4 rounded-xl border-2 border-slate-200 bg-white hover:border-blue-500 cursor-pointer transition-all">
+                  <div class="flex items-center gap-3 min-w-0">
+                    <input type="radio" name="candidateCategory" value="sc" class="w-4 h-4 text-blue-700 shrink-0" />
+                    <div class="min-w-0">
+                      <p class="text-sm font-bold text-slate-900">SC Candidate</p>
+                      <p class="text-xs text-slate-500">Concessional category fee</p>
+                    </div>
+                  </div>
+                  <span id="catScPriceBadge" class="px-3 py-1 rounded-lg bg-emerald-50 text-emerald-700 text-sm font-extrabold shrink-0">₹2,100</span>
+                </label>
+              </div>
+              <p id="errCategory" style="display: none;" class="text-xs text-red-600 font-medium">Please select General / OBC Candidate or SC Candidate.</p>
+            </div>
+
+            <!-- Conditional: Custom Amount Input (Only for Other Sarkari Kaam) -->
+            <div id="customAmountSection" style="display: none;" class="bg-amber-50/70 border border-amber-200 rounded-2xl p-4 sm:p-5">
+              <label for="customAmountInput" class="block text-sm font-bold text-slate-800 mb-1.5">
+                Enter Service Fee Amount (₹ Rupees) <span class="text-red-500">*</span>
+              </label>
+              <div class="relative flex items-center max-w-xs">
+                <span class="absolute left-3.5 text-base font-bold text-slate-500">₹</span>
+                <input
+                  type="number"
+                  id="customAmountInput"
+                  min="1"
+                  inputmode="numeric"
+                  placeholder="e.g. 200"
+                  class="w-full pl-9 pr-4 py-3 rounded-xl border border-slate-300 focus:border-blue-600 focus:ring-4 focus:ring-blue-100 outline-none bg-white text-base font-bold text-slate-900"
+                />
+              </div>
+              <p class="mt-1.5 text-xs text-slate-600">Other Sarkari Kaam ke liye jitni fee tay hui hai wo enter karein.</p>
+              <p id="errCustomAmount" style="display: none;" class="mt-1.5 text-xs text-red-600 font-medium">Please enter a valid fee amount (minimum ₹1).</p>
+            </div>
+
+            <!-- Live Selected Service & Fee Summary Pill -->
+            <div id="step1SummaryPill" style="display: none;" class="bg-slate-900 text-white rounded-2xl p-4 flex flex-wrap items-center justify-between gap-3">
+              <div class="min-w-0">
+                <p class="text-[11px] uppercase tracking-wider text-slate-400 font-semibold">Selected Service</p>
+                <p id="step1SummaryTitle" class="text-sm font-bold text-white truncate mt-0.5">--</p>
+                <p id="step1SummaryDocHint" class="text-xs text-blue-300 mt-0.5">--</p>
+              </div>
+              <div class="px-4 py-2 rounded-xl bg-emerald-500/20 border border-emerald-400/30 text-right shrink-0">
+                <p class="text-[10px] uppercase tracking-wider text-emerald-200 font-semibold">Total Fee</p>
+                <p id="step1SummaryFee" class="text-xl font-extrabold text-emerald-300">₹0</p>
+              </div>
+            </div>
+
+            <!-- Step 1 Next Button -->
+            <div class="pt-2 flex justify-end">
+              <button
+                type="button"
+                id="nextToStep2Btn"
+                class="w-full sm:w-auto px-7 py-3.5 rounded-xl bg-blue-700 hover:bg-blue-800 active:scale-[0.99] text-white font-bold text-sm sm:text-base shadow-md shadow-blue-700/20 transition-all inline-flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <span>Next: File Upload</span>
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- ============================================================= -->
+          <!-- STEP 2: FILE UPLOAD (DYNAMIC BASED ON STEP 1 SERVICE)         -->
+          <!-- ============================================================= -->
+          <div id="wizardStep2" style="display: none;" class="step-animate space-y-6">
+            <div class="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h3 class="text-lg sm:text-xl font-extrabold text-slate-900">Step 2: File Upload</h3>
+                <p id="step2Subtitle" class="text-xs sm:text-sm text-slate-500 mt-0.5">Selected service ke liye zaroori documents upload karein</p>
+              </div>
+              <span id="step2ServiceBadge" class="px-3 py-1 rounded-full bg-blue-50 border border-blue-200 text-blue-800 text-xs font-bold">--</span>
+            </div>
+
+            <!-- MODE A: AADHAAR FRONT & BACK UPLOAD -->
+            <div id="step2AadhaarBlock" style="display: none;" class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+              <!-- Aadhaar Front -->
+              <div>
+                <label class="block text-sm font-semibold text-slate-700 mb-2">
+                  Aadhaar Front Photo <span class="text-red-500">*</span>
+                </label>
+                <div id="frontUploadBox" class="border-2 border-dashed border-slate-300 hover:border-blue-500 bg-slate-50 rounded-2xl p-4 text-center cursor-pointer transition-colors">
+                  <input type="file" id="aadhaarFrontInput" accept="image/*" style="display: none;" />
+                  <div id="frontEmptyState" class="py-6 flex flex-col items-center gap-2">
+                    <div class="w-12 h-12 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center">
+                      <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+                      </svg>
+                    </div>
+                    <p class="text-sm font-semibold text-slate-700">Upload Aadhaar Front</p>
+                    <p class="text-xs text-slate-500">Tap to select photo (JPG/PNG)</p>
+                  </div>
+                  <div id="frontPreviewState" style="display: none;" class="space-y-3">
+                    <img id="frontPreviewImg" src="" alt="Aadhaar Front" class="w-full h-40 object-cover rounded-xl border border-slate-200 bg-white" />
+                    <div class="flex items-center justify-between gap-2">
+                      <span id="frontFileName" class="text-xs text-slate-600 font-medium truncate">front.jpg</span>
+                      <button type="button" id="frontRemoveBtn" class="px-3 py-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 text-xs font-semibold shrink-0 cursor-pointer">Remove</button>
+                    </div>
+                  </div>
+                </div>
+                <p id="errAadhaarFront" style="display: none;" class="mt-1.5 text-xs text-red-600 font-medium">Aadhaar Front photo is required.</p>
+              </div>
+
+              <!-- Aadhaar Back -->
+              <div>
+                <label class="block text-sm font-semibold text-slate-700 mb-2">
+                  Aadhaar Back Photo <span class="text-red-500">*</span>
+                </label>
+                <div id="backUploadBox" class="border-2 border-dashed border-slate-300 hover:border-blue-500 bg-slate-50 rounded-2xl p-4 text-center cursor-pointer transition-colors">
+                  <input type="file" id="aadhaarBackInput" accept="image/*" style="display: none;" />
+                  <div id="backEmptyState" class="py-6 flex flex-col items-center gap-2">
+                    <div class="w-12 h-12 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center">
+                      <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+                      </svg>
+                    </div>
+                    <p class="text-sm font-semibold text-slate-700">Upload Aadhaar Back</p>
+                    <p class="text-xs text-slate-500">Address side photo (JPG/PNG)</p>
+                  </div>
+                  <div id="backPreviewState" style="display: none;" class="space-y-3">
+                    <img id="backPreviewImg" src="" alt="Aadhaar Back" class="w-full h-40 object-cover rounded-xl border border-slate-200 bg-white" />
+                    <div class="flex items-center justify-between gap-2">
+                      <span id="backFileName" class="text-xs text-slate-600 font-medium truncate">back.jpg</span>
+                      <button type="button" id="backRemoveBtn" class="px-3 py-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 text-xs font-semibold shrink-0 cursor-pointer">Remove</button>
+                    </div>
+                  </div>
+                </div>
+                <p id="errAadhaarBack" style="display: none;" class="mt-1.5 text-xs text-red-600 font-medium">Aadhaar Back photo is required.</p>
+              </div>
+            </div>
+
+            <!-- MODE B: TRAINING SLIP PHOTO UPLOAD -->
+            <div id="step2SlipBlock" style="display: none;" class="max-w-md mx-auto">
+              <label class="block text-sm font-semibold text-slate-700 mb-2">
+                Training Slip Photo <span class="text-red-500">*</span>
+              </label>
+              <div id="slipUploadBox" class="border-2 border-dashed border-slate-300 hover:border-blue-500 bg-slate-50 rounded-2xl p-5 text-center cursor-pointer transition-colors">
+                <input type="file" id="slipPhotoInput" accept="image/*" style="display: none;" />
+                <div id="slipEmptyState" class="py-6 flex flex-col items-center gap-2">
+                  <div class="w-12 h-12 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+                    </svg>
+                  </div>
+                  <p class="text-sm font-semibold text-slate-700">Upload Training Slip Photo</p>
+                  <p class="text-xs text-slate-500">Tap to select clear slip photo (JPG/PNG)</p>
+                </div>
+                <div id="slipPreviewState" style="display: none;" class="space-y-3">
+                  <img id="slipPreviewImg" src="" alt="Training Slip" class="w-full h-44 object-cover rounded-xl border border-slate-200 bg-white" />
+                  <div class="flex items-center justify-between gap-2">
+                    <span id="slipFileName" class="text-xs text-slate-600 font-medium truncate">slip.jpg</span>
+                    <button type="button" id="slipRemoveBtn" class="px-3 py-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 text-xs font-semibold shrink-0 cursor-pointer">Remove</button>
+                  </div>
+                </div>
+              </div>
+              <p id="errSlipPhoto" style="display: none;" class="mt-1.5 text-xs text-red-600 font-medium">Training Slip photo is required.</p>
+            </div>
+
+            <!-- MODE C: NO DOCUMENT REQUIRED CONFIRMATION -->
+            <div id="step2NoDocBlock" style="display: none;" class="bg-emerald-50 border border-emerald-200 rounded-2xl p-6 text-center space-y-3">
+              <div class="w-14 h-14 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center mx-auto">
+                <svg class="w-8 h-8" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <h4 class="text-base font-extrabold text-emerald-900">No Document Upload Required</h4>
+              <p class="text-sm text-emerald-800 max-w-md mx-auto leading-relaxed">
+                Is service ke liye koi document upload karne ki zaroorat nahi hai. Aap seedha Fee Deposit par ja sakte hain.
+              </p>
+            </div>
+
+            <!-- Step 2 Navigation Buttons -->
+            <div class="pt-3 border-t border-slate-200 flex flex-col-reverse sm:flex-row items-center justify-between gap-3">
+              <button
+                type="button"
+                id="backToStep1Btn"
+                class="w-full sm:w-auto px-6 py-3.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-sm transition-colors inline-flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
+                </svg>
+                <span>Back</span>
+              </button>
+
+              <button
+                type="button"
+                id="nextToStep3Btn"
+                class="w-full sm:w-auto px-7 py-3.5 rounded-xl bg-blue-700 hover:bg-blue-800 active:scale-[0.99] text-white font-bold text-sm sm:text-base shadow-md shadow-blue-700/20 transition-all inline-flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <span>Next: Fee Deposit</span>
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- ============================================================= -->
+          <!-- STEP 3: FEE DEPOSIT (SUMMARY + UPI QR + SUBMIT)               -->
+          <!-- ============================================================= -->
+          <div id="wizardStep3" style="display: none;" class="step-animate space-y-6">
+            <div>
+              <h3 class="text-lg sm:text-xl font-extrabold text-slate-900">Step 3: Fee Deposit</h3>
+              <p class="text-xs sm:text-sm text-slate-500 mt-0.5">Apni details verify karein, QR code scan karke fees pay karein aur submit karein</p>
+            </div>
+
+            <!-- Compact Application & Payable Amount Summary Box -->
+            <div class="bg-gradient-to-br from-slate-900 via-slate-900 to-blue-950 text-white rounded-2xl p-5 shadow-md space-y-4">
+              <div class="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 pb-4">
+                <div>
+                  <p class="text-[11px] uppercase tracking-wider text-blue-300 font-semibold">Payable Amount</p>
+                  <p id="step3SummaryService" class="text-sm sm:text-base font-bold text-white mt-0.5">--</p>
+                  <p id="step3SummaryCategory" style="display: none;" class="text-xs text-indigo-300 font-semibold mt-0.5">--</p>
+                </div>
+                <div class="px-5 py-2.5 rounded-xl bg-emerald-500/20 border border-emerald-400/30 text-center shrink-0">
+                  <span id="step3PayableAmount" class="text-2xl sm:text-3xl font-extrabold text-emerald-300">₹0</span>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                <div>
+                  <span class="text-slate-400 block">Applicant Name</span>
+                  <span id="step3SummaryName" class="font-bold text-white">--</span>
+                </div>
+                <div>
+                  <span class="text-slate-400 block">Mobile Number</span>
+                  <span id="step3SummaryMobile" class="font-bold text-white">--</span>
+                </div>
+                <div>
+                  <span class="text-slate-400 block">Documents</span>
+                  <span id="step3SummaryDocs" class="font-bold text-emerald-300">--</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- UPI QR Code Payment Box (STRICTLY NO UTR NUMBER FIELD) -->
+            <div class="bg-slate-50 rounded-2xl border border-slate-200 p-5 grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
+              <!-- Left: QR Code -->
+              <div class="md:col-span-5 flex flex-col items-center bg-white rounded-2xl p-4 border border-slate-200 shadow-sm">
+                <span id="qrBadgeLabel" class="text-xs font-bold uppercase tracking-wider text-blue-700 bg-blue-50 px-3 py-1 rounded-full mb-3">Scan &amp; Pay via UPI</span>
+
+                <div class="w-48 h-48 p-2 bg-white rounded-2xl border-2 border-slate-900 flex items-center justify-center overflow-hidden">
+                  <div id="upiQrImage" class="w-full h-full flex items-center justify-center" role="img" aria-label="UPI Payment QR Code"></div>
+                  <!-- Offline Fallback SVG -->
+                  <svg id="qrFallbackSvg" style="display: none;" viewBox="0 0 200 200" class="w-full h-full" xmlns="http://www.w3.org/2000/svg">
+                    <rect width="200" height="200" fill="#ffffff" />
+                    <rect x="12" y="12" width="52" height="52" rx="6" fill="#0f172a" />
+                    <rect x="20" y="20" width="36" height="36" rx="3" fill="#ffffff" />
+                    <rect x="28" y="28" width="20" height="20" rx="2" fill="#1d4ed8" />
+                    <rect x="136" y="12" width="52" height="52" rx="6" fill="#0f172a" />
+                    <rect x="144" y="20" width="36" height="36" rx="3" fill="#ffffff" />
+                    <rect x="152" y="28" width="20" height="20" rx="2" fill="#1d4ed8" />
+                    <rect x="12" y="136" width="52" height="52" rx="6" fill="#0f172a" />
+                    <rect x="20" y="144" width="36" height="36" rx="3" fill="#ffffff" />
+                    <rect x="28" y="152" width="20" height="20" rx="2" fill="#1d4ed8" />
+                    <rect x="74" y="74" width="52" height="52" rx="10" fill="#eff6ff" stroke="#1d4ed8" stroke-width="3" />
+                    <text x="100" y="106" text-anchor="middle" font-family="Inter, sans-serif" font-weight="800" font-size="16" fill="#1d4ed8">UPI</text>
+                  </svg>
+                </div>
+
+                <!-- UPI ID + Copy Button -->
+                <div class="w-full mt-4 flex items-center justify-between gap-2 bg-slate-100 rounded-xl px-3 py-2 border border-slate-200">
+                  <div class="min-w-0">
+                    <p class="text-[10px] font-semibold uppercase text-slate-500">UPI ID</p>
+                    <p id="displayUpiId" class="text-xs sm:text-sm font-bold text-slate-900 truncate">digitalseva@upi</p>
+                  </div>
+                  <button type="button" id="copyUpiBtn" class="px-3 py-1.5 rounded-lg bg-blue-700 hover:bg-blue-800 text-white text-xs font-semibold shrink-0 transition-colors cursor-pointer">
+                    Copy UPI ID
+                  </button>
+                </div>
+
+                <a id="openUpiAppBtn" href="#" class="w-full mt-2.5 inline-flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs sm:text-sm font-bold shrink-0 transition-colors cursor-pointer">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 17.25v1.007a3 3 0 01-.879 2.122L7.5 21h9l-.621-.621A3 3 0 0115 18.257V17.25m6-12V15a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 15V5.25m18 0A2.25 2.25 0 0018.75 3H5.25A2.25 2.25 0 003 5.25m18 0V12a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 12V5.25" /></svg>
+                  Pay Directly in UPI App
+                </a>
+
+                <div class="flex flex-wrap justify-center gap-1.5 mt-3">
+                  <span class="px-2 py-0.5 rounded bg-purple-50 text-purple-700 border border-purple-200 text-[11px] font-bold">PhonePe</span>
+                  <span class="px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200 text-[11px] font-bold">GPay</span>
+                  <span class="px-2 py-0.5 rounded bg-sky-50 text-sky-700 border border-sky-200 text-[11px] font-bold">Paytm</span>
+                  <span class="px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 text-[11px] font-bold">BHIM</span>
+                </div>
+              </div>
+
+              <!-- Right: Instructions + Optional Payment Screenshot -->
+              <div class="md:col-span-7 space-y-4">
+                <div class="bg-blue-50 border border-blue-200 rounded-2xl p-4 text-xs sm:text-sm text-blue-900 space-y-1.5">
+                  <p class="font-bold">Payment Kaise Karein:</p>
+                  <p>1. PhonePe, Google Pay, Paytm ya BHIM app kholein.</p>
+                  <p>2. Left side me diye gaye QR Code ko scan karein (amount apne aap fill hoga).</p>
+                  <p>3. Payment complete hone ke baad niche <strong>Submit Application &amp; Get Receipt</strong> par click karein.</p>
+                </div>
+
+                <!-- Optional Payment Screenshot Upload -->
+                <div>
+                  <label class="block text-sm font-semibold text-slate-700 mb-1.5">
+                    Upload Payment Screenshot <span class="text-slate-400 font-normal">(Optional)</span>
+                  </label>
+                  <div id="paySsUploadBox" class="border-2 border-dashed border-slate-300 hover:border-blue-500 bg-white rounded-2xl p-4 cursor-pointer transition-colors">
+                    <input type="file" id="paySsInput" accept="image/*" style="display: none;" />
+                    <div id="paySsEmptyState" class="flex items-center gap-3">
+                      <div class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+                        </svg>
+                      </div>
+                      <div>
+                        <p class="text-sm font-semibold text-slate-700">Attach Payment Screenshot</p>
+                        <p class="text-xs text-slate-500">Tap to upload receipt screenshot (Optional)</p>
+                      </div>
+                    </div>
+                    <div id="paySsPreviewState" style="display: none;" class="flex items-center justify-between gap-3">
+                      <div class="flex items-center gap-3 min-w-0">
+                        <img id="paySsPreviewImg" src="" alt="Payment Screenshot" class="w-12 h-12 object-cover rounded-xl border border-slate-200 shrink-0" />
+                        <div class="min-w-0">
+                          <p id="paySsFileName" class="text-xs font-semibold text-slate-800 truncate">screenshot.jpg</p>
+                          <p class="text-[11px] text-emerald-600 font-medium">Attached</p>
+                        </div>
+                      </div>
+                      <button type="button" id="paySsRemoveBtn" class="px-2.5 py-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 text-xs font-semibold shrink-0 cursor-pointer">Remove</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Step 3 Navigation Buttons -->
+            <div class="pt-3 border-t border-slate-200 flex flex-col-reverse sm:flex-row items-center justify-between gap-3">
+              <button
+                type="button"
+                id="backToStep2Btn"
+                class="w-full sm:w-auto px-6 py-3.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-sm transition-colors inline-flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
+                </svg>
+                <span>Back</span>
+              </button>
+
+              <button
+                type="submit"
+                class="w-full sm:w-auto px-8 py-3.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 active:scale-[0.99] text-white font-bold text-sm sm:text-base shadow-lg shadow-emerald-600/25 transition-all inline-flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <span>Submit Application &amp; Get Receipt</span>
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                </svg>
+              </button>
+            </div>
+          </div>
+
+        </form>
+      </div>
+    </section>
+  </main>
+
+  <!-- ===================================================================== -->
+  <!-- FOOTER                                                                -->
+  <!-- ===================================================================== -->
+  <footer class="bg-slate-900 text-slate-300 py-6 px-4 sm:px-6 mt-auto no-print">
+    <div class="max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
+      <div>
+        <h4 id="footerShopName" class="text-white font-bold text-sm">Digital Seva Kendra</h4>
+        <p class="text-xs text-slate-400 mt-0.5">Online Citizen Documentation &amp; Form Assistance Portal</p>
+      </div>
+      <div class="text-xs text-slate-300 bg-slate-800 border border-slate-700 rounded-xl px-4 py-2">
+        WhatsApp Support: <span id="footerWhatsapp" class="font-bold text-white">+91 9876543210</span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ===================================================================== -->
+  <!-- MODAL 1: INSTANT DIGITAL RECEIPT MODAL                                -->
+  <!-- ===================================================================== -->
+  <div id="receiptModal" style="display: none; z-index: 9999;" class="fixed inset-0 bg-slate-900/65 backdrop-blur-sm items-center justify-center p-4 overflow-y-auto">
+    <div id="receiptCard" class="bg-white rounded-2xl max-w-md w-full shadow-2xl border border-slate-200 overflow-hidden my-auto">
+      <div class="bg-gradient-to-r from-emerald-600 to-teal-600 text-white px-6 py-5 text-center">
+        <div class="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center mx-auto mb-2 no-print">
+          <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+          </svg>
+        </div>
+        <h3 class="text-xl font-extrabold">Application Submitted!</h3>
+        <p id="receiptShopHeader" class="text-xs text-emerald-100 font-medium mt-0.5">Digital Seva Kendra — Digital Receipt</p>
+      </div>
+
+      <div class="p-6 space-y-4">
+        <div class="bg-blue-50 border border-blue-200 rounded-xl p-3 text-center">
+          <p class="text-[11px] uppercase font-bold tracking-wider text-blue-700">Reference ID</p>
+          <p id="recRefId" class="text-xl font-extrabold text-slate-900 mt-0.5">DSK-2026-0000</p>
+        </div>
+
+        <div class="divide-y divide-slate-100 text-sm border border-slate-200 rounded-xl overflow-hidden">
+          <div class="flex justify-between gap-3 px-4 py-2.5 bg-slate-50/60">
+            <span class="text-slate-500 shrink-0">Date &amp; Time</span>
+            <span id="recDate" class="font-semibold text-slate-800 text-right">--</span>
+          </div>
+          <div class="flex justify-between gap-3 px-4 py-2.5">
+            <span class="text-slate-500 shrink-0">Customer Name</span>
+            <span id="recName" class="font-semibold text-slate-800 text-right">--</span>
+          </div>
+          <div class="flex justify-between gap-3 px-4 py-2.5 bg-slate-50/60">
+            <span class="text-slate-500 shrink-0">Mobile</span>
+            <span id="recMobile" class="font-semibold text-slate-800 text-right">--</span>
+          </div>
+          <div class="flex justify-between gap-3 px-4 py-2.5">
+            <span class="text-slate-500 shrink-0">Service</span>
+            <span id="recService" class="font-semibold text-blue-700 text-right">--</span>
+          </div>
+          <div id="recCategoryRow" style="display: none;" class="flex justify-between gap-3 px-4 py-2.5 bg-slate-50/60">
+            <span class="text-slate-500 shrink-0">Category</span>
+            <span id="recCategory" class="font-semibold text-indigo-700 text-right">--</span>
+          </div>
+          <div class="flex justify-between gap-3 px-4 py-2.5 bg-slate-50/60">
+            <span class="text-slate-500 shrink-0">Amount Paid</span>
+            <span id="recAmount" class="font-extrabold text-emerald-700 text-right">₹0</span>
+          </div>
+          <div class="flex justify-between gap-3 px-4 py-2.5">
+            <span class="text-slate-500 shrink-0">Documents</span>
+            <span id="recDocsStatus" class="font-semibold text-slate-700 text-right">--</span>
+          </div>
+        </div>
+
+        <div class="space-y-2.5 pt-1 no-print">
+          <button type="button" id="receiptWhatsappBtn" class="w-full py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm flex items-center justify-center gap-2 transition-colors cursor-pointer">
+            <span>Send Details on WhatsApp</span>
+          </button>
+          <div class="flex gap-2.5">
+            <button type="button" id="receiptPrintBtn" class="flex-1 py-3 px-4 rounded-xl bg-blue-700 hover:bg-blue-800 text-white font-semibold text-sm transition-colors cursor-pointer">
+              Print Receipt
+            </button>
+            <button type="button" id="receiptNewBtn" class="flex-1 py-3 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold text-sm transition-colors cursor-pointer">
+              New Application
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- MODAL 2: ADMIN LOGIN MODAL (Password Protected: admin / 0087)         -->
+  <!-- ===================================================================== -->
+  <div id="adminLoginModal" style="display: none; z-index: 9999;" class="fixed inset-0 bg-slate-900/70 backdrop-blur-sm items-center justify-center p-4 no-print">
+    <div class="bg-white rounded-2xl max-w-sm w-full shadow-2xl border border-slate-200 overflow-hidden">
+      <div class="bg-slate-900 text-white px-6 py-4 flex items-center justify-between">
+        <div class="flex items-center gap-2.5">
+          <div class="w-9 h-9 rounded-xl bg-blue-600/30 border border-blue-400/30 flex items-center justify-center text-blue-300">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+            </svg>
+          </div>
+          <div>
+            <h3 class="text-base font-bold">Admin Login</h3>
+            <p class="text-[11px] text-slate-400">Enter credentials to unlock</p>
+          </div>
+        </div>
+        <button type="button" id="closeLoginModalBtn" class="w-8 h-8 rounded-lg bg-white/10 hover:bg-white/20 flex items-center justify-center text-lg leading-none cursor-pointer">&times;</button>
+      </div>
+
+      <form id="adminLoginForm" class="p-6 space-y-4">
+        <div>
+          <label for="adminUsernameInput" class="block text-xs font-bold uppercase text-slate-600 mb-1.5">Username</label>
+          <input
+            type="text"
+            id="adminUsernameInput"
+            autocomplete="username"
+            placeholder="Enter username"
+            class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:border-blue-600 focus:ring-4 focus:ring-blue-100 outline-none text-sm"
+          />
+        </div>
+        <div>
+          <label for="adminPasswordInput" class="block text-xs font-bold uppercase text-slate-600 mb-1.5">Password</label>
+          <input
+            type="password"
+            id="adminPasswordInput"
+            autocomplete="current-password"
+            placeholder="Enter password"
+            class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:border-blue-600 focus:ring-4 focus:ring-blue-100 outline-none text-sm"
+          />
+        </div>
+
+        <p id="adminLoginError" style="display: none;" class="text-xs font-semibold text-red-600 bg-red-50 border border-red-200 rounded-xl px-3 py-2">
+          Invalid username or password. Please try again.
+        </p>
+
+        <button type="submit" class="w-full py-3 px-4 rounded-xl bg-blue-700 hover:bg-blue-800 text-white font-bold text-sm shadow-sm transition-colors cursor-pointer">
+          Login to Admin Panel
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- MODAL 3: ADMIN DASHBOARD MODAL                                        -->
+  <!-- ===================================================================== -->
+  <div id="adminDashboardModal" style="display: none; z-index: 9999;" class="fixed inset-0 bg-slate-900/70 backdrop-blur-sm items-center justify-center p-4 overflow-y-auto no-print">
+    <div class="bg-white rounded-2xl max-w-4xl w-full shadow-2xl border border-slate-200 overflow-hidden my-auto max-h-[90vh] flex flex-col">
+
+      <!-- Top Bar -->
+      <div class="px-6 py-4 bg-slate-900 text-white flex items-center justify-between gap-3 shrink-0">
+        <div>
+          <h3 class="text-lg font-bold">Admin Panel</h3>
+          <p class="text-xs text-slate-400">Manage Applications, Shop Details &amp; UPI QR</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <button type="button" id="adminLogoutBtn" class="px-3.5 py-1.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-bold transition-colors cursor-pointer">
+            Logout
+          </button>
+          <button type="button" id="closeAdminDashboardBtn" class="w-9 h-9 rounded-xl bg-white/10 hover:bg-white/20 flex items-center justify-center text-white text-xl leading-none cursor-pointer">
+            &times;
+          </button>
+        </div>
+      </div>
+
+      <!-- Tabs Navigation -->
+      <div class="flex border-b border-slate-200 bg-slate-50 px-6 shrink-0">
+        <button type="button" id="tabAppsBtn" class="px-4 py-3 text-sm font-bold text-blue-700 border-b-2 border-blue-700 flex items-center gap-2 transition-colors cursor-pointer">
+          <span>Applications</span>
+          <span id="tabAppsCount" class="px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 text-xs font-bold">0</span>
+        </button>
+        <button type="button" id="tabSettingsBtn" class="px-4 py-3 text-sm font-semibold text-slate-500 hover:text-slate-800 border-b-2 border-transparent transition-colors cursor-pointer">
+          Settings
+        </button>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="p-5 sm:p-6 overflow-y-auto flex-1">
+
+        <!-- TAB 1: APPLICATIONS LIST -->
+        <div id="tabAppsPanel" style="display: block;" class="space-y-4">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <input
+              type="text"
+              id="adminSearchInput"
+              placeholder="Search by Name, Mobile, Ref ID, Service or Category..."
+              class="flex-1 px-3.5 py-2 rounded-xl border border-slate-300 focus:border-blue-600 outline-none text-sm bg-white"
+            />
+            <button type="button" id="clearAllAppsBtn" style="display: none;" class="px-3.5 py-2 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 text-xs font-bold shrink-0 cursor-pointer">
+              Clear All
+            </button>
+          </div>
+
+          <!-- Inline Clear All Confirmation (Replaces confirm) -->
+          <div id="clearConfirmBox" style="display: none;" class="bg-red-50 border border-red-200 rounded-xl p-3 flex flex-wrap items-center justify-between gap-3">
+            <span class="text-xs font-semibold text-red-800">Delete all saved applications permanently?</span>
+            <div class="flex items-center gap-2">
+              <button type="button" id="confirmClearYesBtn" class="px-3 py-1.5 rounded-lg bg-red-600 text-white text-xs font-bold cursor-pointer">Yes, Delete All</button>
+              <button type="button" id="confirmClearNoBtn" class="px-3 py-1.5 rounded-lg bg-white border border-slate-300 text-slate-700 text-xs font-semibold cursor-pointer">Cancel</button>
+            </div>
+          </div>
+
+          <div id="adminAppsList" class="space-y-3"></div>
+        </div>
+
+        <!-- TAB 2: OWNER SETTINGS & QR -->
+        <div id="tabSettingsPanel" style="display: none;" class="space-y-5">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label for="settingShopName" class="block text-xs font-bold uppercase text-slate-600 mb-1.5">Shop Name</label>
+              <input type="text" id="settingShopName" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:border-blue-600 outline-none text-sm" />
+            </div>
+            <div>
+              <label for="settingWhatsapp" class="block text-xs font-bold uppercase text-slate-600 mb-1.5">Owner WhatsApp Number (10 Digits)</label>
+              <input type="tel" id="settingWhatsapp" maxlength="10" placeholder="9876543210" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:border-blue-600 outline-none text-sm" />
+            </div>
+            <div class="sm:col-span-2">
+              <label for="settingUpiId" class="block text-xs font-bold uppercase text-slate-600 mb-1.5">UPI ID</label>
+              <input type="text" id="settingUpiId" placeholder="yourshop@ybl" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:border-blue-600 outline-none text-sm" />
+            </div>
+          </div>
+
+          <!-- Custom QR Upload -->
+          <div class="bg-slate-50 rounded-2xl p-4 border border-slate-200">
+            <label class="block text-xs font-bold uppercase text-slate-600 mb-2">Custom UPI QR Code Image (Optional)</label>
+            <div class="flex flex-col sm:flex-row items-center gap-4">
+              <div class="w-28 h-28 rounded-xl bg-white border border-slate-200 flex items-center justify-center overflow-hidden shrink-0 p-1">
+                <img id="settingQrPreview" src="" alt="Custom QR Preview" style="display: none;" class="w-full h-full object-contain rounded-lg" />
+                <span id="settingQrPlaceholder" class="text-[11px] text-slate-500 text-center px-2 font-medium">Dynamic UPI QR Active</span>
+              </div>
+              <div class="flex-1 space-y-2 text-center sm:text-left">
+                <p class="text-xs text-slate-600">Upload your own static PhonePe / GPay / Paytm QR image, or keep blank to auto-generate dynamic UPI QR with exact payable amount.</p>
+                <div class="flex flex-wrap justify-center sm:justify-start gap-2">
+                  <input type="file" id="settingQrInput" accept="image/*" style="display: none;" />
+                  <button type="button" id="settingQrUploadBtn" class="px-3.5 py-2 rounded-xl bg-blue-700 hover:bg-blue-800 text-white text-xs font-semibold cursor-pointer">Upload Custom QR</button>
+                  <button type="button" id="settingQrResetBtn" class="px-3.5 py-2 rounded-xl bg-white hover:bg-slate-100 border border-slate-300 text-slate-700 text-xs font-semibold cursor-pointer">Remove Custom QR</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex justify-end">
+            <button type="button" id="saveSettingsBtn" class="px-6 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold shadow-sm transition-colors cursor-pointer">
+              Save Settings
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- MODAL 4: IMAGE LIGHTBOX MODAL                                         -->
+  <!-- ===================================================================== -->
+  <div id="lightboxModal" style="display: none; z-index: 10020;" class="fixed inset-0 bg-slate-950/85 backdrop-blur-sm items-center justify-center p-4 no-print">
+    <div class="bg-white rounded-2xl max-w-2xl w-full overflow-hidden shadow-2xl">
+      <div class="flex items-center justify-between px-4 py-3 bg-slate-900 text-white">
+        <span id="lightboxTitle" class="text-sm font-bold truncate">Document Preview</span>
+        <button type="button" id="closeLightboxBtn" class="w-8 h-8 rounded-lg bg-white/10 hover:bg-white/20 flex items-center justify-center text-lg leading-none cursor-pointer">&times;</button>
+      </div>
+      <div class="p-4 bg-slate-100 flex items-center justify-center max-h-[75vh] overflow-auto">
+        <img id="lightboxImg" src="" alt="Full Preview" class="max-w-full max-h-[68vh] object-contain rounded-xl shadow" />
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- VANILLA JAVASCRIPT: 3-STEP WIZARD + ADMIN PANEL                       -->
+  <!-- ===================================================================== -->
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      'use strict';
+
+      // ===================================================================
+      // CONSTANTS & SERVICE CONFIGURATION
+      // ===================================================================
+      const STORAGE_SETTINGS_KEY = 'dsk_wizard_settings_v1';
+      const STORAGE_APPS_KEY = 'dsk_wizard_apps_v1';
+      const ADMIN_USERNAME = 'admin';
+      const ADMIN_PASSWORD = '0087';
+
+      const DEFAULT_SETTINGS = {
+        shopName: 'Digital Seva Kendra',
+        upiId: 'digitalseva@upi',
+        whatsapp: '9876543210',
+        customQr: ''
+      };
+
+      const CATEGORY_LABELS = {
+        gen_obc: 'General / OBC Candidate',
+        sc: 'SC Candidate'
+      };
+
+      const SERVICE_CONFIG = {
+        red_cross: {
+          label: 'Red Cross Certificate for Driving Licence',
+          fee: 650,
+          customAmount: false,
+          docType: 'aadhaar',
+          hasSubParts: false,
+          hasCategory: false
+        },
+        heavy_file: {
+          label: 'Heavy Driving Licence File',
+          fee: 700,
+          customAmount: false,
+          docType: 'none',
+          hasSubParts: false,
+          hasCategory: false
+        },
+        heavy_fee: {
+          label: 'Heavy Licence Fee',
+          fee: 0,
+          customAmount: false,
+          docType: 'none',
+          hasSubParts: true,
+          hasCategory: false
+        },
+        heavy_absent: {
+          label: 'Heavy Licence Training Absent Fees',
+          fee: 0,
+          customAmount: false,
+          docType: 'slip',
+          hasSubParts: false,
+          hasCategory: true,
+          categoryFees: {
+            gen_obc: 1600,
+            sc: 850
+          }
+        },
+        pan_card: {
+          label: 'PAN Card',
+          fee: 250,
+          customAmount: false,
+          docType: 'aadhaar',
+          hasSubParts: false,
+          hasCategory: false
+        },
+        aadhaar_service: {
+          label: 'Aadhaar Card / Update',
+          fee: 100,
+          customAmount: false,
+          docType: 'aadhaar',
+          hasSubParts: false,
+          hasCategory: false
+        },
+        income_cert: {
+          label: 'Income / Caste / Domicile Certificate',
+          fee: 150,
+          customAmount: false,
+          docType: 'aadhaar',
+          hasSubParts: false,
+          hasCategory: false
+        },
+        other_service: {
+          label: 'Other Sarkari Kaam',
+          fee: 0,
+          customAmount: true,
+          docType: 'aadhaar',
+          hasSubParts: false,
+          hasCategory: false
+        }
+      };
+
+      const HEAVY_PARTS = {
+        training_fee: {
+          label: 'Training Fee with Learner Licence',
+          hasCategory: true,
+          categoryFees: {
+            gen_obc: 3600,
+            sc: 2100
+          },
+          docType: 'slip'
+        },
+        rto_fee: {
+          label: 'RTO Fees after Training',
+          hasCategory: false,
+          fee: 1450,
+          docType: 'none'
+        }
+      };
+
+      // ===================================================================
+      // WIZARD & APP STATE
+      // ===================================================================
+      let currentStep = 1;
+      let selectedHeavyPart = '';
+      let selectedCategory = '';
+      let isAdminLoggedIn = false;
+      let lastReceiptRecord = null;
+      let tempSettingsQr = '';
+
+      const uploadedImages = {
+        aadhaarFront: '',
+        aadhaarBack: '',
+        trainingSlip: '',
+        paymentSs: ''
+      };
+
+      // ===================================================================
+      // DOM REFERENCES
+      // ===================================================================
+      const headerShopName = document.getElementById('headerShopName');
+      const footerShopName = document.getElementById('footerShopName');
+      const footerWhatsapp = document.getElementById('footerWhatsapp');
+      const headerAppCount = document.getElementById('headerAppCount');
+
+      // Stepper UI
+      const stepDot1 = document.getElementById('stepDot1');
+      const stepDot2 = document.getElementById('stepDot2');
+      const stepDot3 = document.getElementById('stepDot3');
+      const stepLabel1 = document.getElementById('stepLabel1');
+      const stepLabel2 = document.getElementById('stepLabel2');
+      const stepLabel3 = document.getElementById('stepLabel3');
+      const stepLine1 = document.getElementById('stepLine1');
+      const stepLine2 = document.getElementById('stepLine2');
+
+      const wizardStep1 = document.getElementById('wizardStep1');
+      const wizardStep2 = document.getElementById('wizardStep2');
+      const wizardStep3 = document.getElementById('wizardStep3');
+
+      // Step 1 Inputs
+      const applicationForm = document.getElementById('applicationForm');
+      const customerName = document.getElementById('customerName');
+      const customerMobile = document.getElementById('customerMobile');
+      const serviceSelect = document.getElementById('serviceSelect');
+      const heavyFeePartSection = document.getElementById('heavyFeePartSection');
+      const heavyPartRadios = document.querySelectorAll('input[name="heavyFeePart"]');
+      const cardTrainingFee = document.getElementById('cardTrainingFee');
+      const cardRtoFee = document.getElementById('cardRtoFee');
+
+      const categorySection = document.getElementById('categorySection');
+      const categorySectionTitle = document.getElementById('categorySectionTitle');
+      const categoryRadios = document.querySelectorAll('input[name="candidateCategory"]');
+      const cardCatGenObc = document.getElementById('cardCatGenObc');
+      const cardCatSc = document.getElementById('cardCatSc');
+      const catGenObcPriceBadge = document.getElementById('catGenObcPriceBadge');
+      const catScPriceBadge = document.getElementById('catScPriceBadge');
+
+      const customAmountSection = document.getElementById('customAmountSection');
+      const customAmountInput = document.getElementById('customAmountInput');
+
+      const step1SummaryPill = document.getElementById('step1SummaryPill');
+      const step1SummaryTitle = document.getElementById('step1SummaryTitle');
+      const step1SummaryDocHint = document.getElementById('step1SummaryDocHint');
+      const step1SummaryFee = document.getElementById('step1SummaryFee');
+
+      // Step 2 Blocks
+      const step2Subtitle = document.getElementById('step2Subtitle');
+      const step2ServiceBadge = document.getElementById('step2ServiceBadge');
+      const step2AadhaarBlock = document.getElementById('step2AadhaarBlock');
+      const step2SlipBlock = document.getElementById('step2SlipBlock');
+      const step2NoDocBlock = document.getElementById('step2NoDocBlock');
+
+      // Step 3 Summary & QR
+      const step3SummaryService = document.getElementById('step3SummaryService');
+      const step3SummaryCategory = document.getElementById('step3SummaryCategory');
+      const step3PayableAmount = document.getElementById('step3PayableAmount');
+      const step3SummaryName = document.getElementById('step3SummaryName');
+      const step3SummaryMobile = document.getElementById('step3SummaryMobile');
+      const step3SummaryDocs = document.getElementById('step3SummaryDocs');
+
+      const upiQrImage = document.getElementById('upiQrImage');
+      const qrFallbackSvg = document.getElementById('qrFallbackSvg');
+      const openUpiAppBtn = document.getElementById('openUpiAppBtn');
+      const qrBadgeLabel = document.getElementById('qrBadgeLabel');
+      const displayUpiId = document.getElementById('displayUpiId');
+
+      // Modals
+      const receiptModal = document.getElementById('receiptModal');
+      const adminLoginModal = document.getElementById('adminLoginModal');
+      const adminDashboardModal = document.getElementById('adminDashboardModal');
+      const lightboxModal = document.getElementById('lightboxModal');
+
+      // ===================================================================
+      // HELPER UTILITIES
+      // ===================================================================
+      function setDisplay(el, val) {
+        if (el) el.style.display = val;
+      }
+
+      function showToast(message, type) {
+        const container = document.getElementById('toastContainer');
+        if (!container) return;
+        const toast = document.createElement('div');
+        const styles = {
+          success: 'bg-emerald-600 text-white',
+          error: 'bg-red-600 text-white',
+          info: 'bg-slate-900 text-white'
+        };
+        toast.className = 'pointer-events-auto px-4 py-3 rounded-xl shadow-lg text-xs sm:text-sm font-semibold transition-opacity duration-300 ' + (styles[type] || styles.info);
+        toast.textContent = message;
+        container.appendChild(toast);
+        setTimeout(function () {
+          toast.style.opacity = '0';
+          setTimeout(function () {
+            if (toast.parentNode) toast.parentNode.removeChild(toast);
+          }, 300);
+        }, 3000);
+      }
+
+      function escapeHtml(val) {
+        if (val === null || val === undefined) return '';
+        return String(val)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#039;');
+      }
+
+      function formatINR(num) {
+        return (Number(num) || 0).toLocaleString('en-IN');
+      }
+
+      // -------------------------------------------------------------
+      // LOCAL (per-device) FALLBACK STORAGE — used only when the cloud
+      // database is unavailable for this viewer.
+      // -------------------------------------------------------------
+      function getSettingsLocal() {
+        try {
+          const raw = localStorage.getItem(STORAGE_SETTINGS_KEY);
+          if (!raw) return Object.assign({}, DEFAULT_SETTINGS);
+          return Object.assign({}, DEFAULT_SETTINGS, JSON.parse(raw));
+        } catch (err) {
+          return Object.assign({}, DEFAULT_SETTINGS);
+        }
+      }
+
+      function saveSettingsLocal(obj) {
+        try {
+          localStorage.setItem(STORAGE_SETTINGS_KEY, JSON.stringify(obj));
+          return true;
+        } catch (err) {
+          showToast('Storage full! Please try a smaller QR image.', 'error');
+          return false;
+        }
+      }
+
+      function getApplicationsLocal() {
+        try {
+          const raw = localStorage.getItem(STORAGE_APPS_KEY);
+          return raw ? JSON.parse(raw) : [];
+        } catch (err) {
+          return [];
+        }
+      }
+
+      function saveApplicationsLocal(list) {
+        try {
+          localStorage.setItem(STORAGE_APPS_KEY, JSON.stringify(list));
+          return true;
+        } catch (err) {
+          try {
+            localStorage.setItem(STORAGE_APPS_KEY, JSON.stringify(list.slice(0, 8)));
+            return true;
+          } catch (e) {
+            showToast('Browser storage full. Please clear old applications in Admin Panel.', 'error');
+            return false;
+          }
+        }
+      }
+
+      // -------------------------------------------------------------
+      // CLOUD SYNC (shared across every device/browser that opens this
+      // page) — keeps an in-memory cache that the rest of the app reads
+      // synchronously, backed by the `db` capability when available.
+      // -------------------------------------------------------------
+      let cloudDb = null;
+      let cachedSettings = getSettingsLocal();
+      let cachedApplications = getApplicationsLocal();
+
+      function jsonSizeBytes(obj) {
+        try {
+          return new Blob([JSON.stringify(obj)]).size;
+        } catch (e) {
+          return 0;
+        }
+      }
+
+      function compressDataUrl(dataUrl, maxWidth, quality) {
+        return new Promise(function (resolve) {
+          if (!dataUrl) { resolve(dataUrl); return; }
+          const img = new Image();
+          img.onload = function () {
+            let w = img.width, h = img.height;
+            if (w > maxWidth) {
+              h = Math.round(h * (maxWidth / w));
+              w = maxWidth;
+            }
+            const canvas = document.createElement('canvas');
+            canvas.width = w;
+            canvas.height = h;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, w, h);
+            resolve(canvas.toDataURL('image/jpeg', quality));
+          };
+          img.onerror = function () { resolve(dataUrl); };
+          img.src = dataUrl;
+        });
+      }
+
+      // Progressively shrinks a record's embedded images so it stays
+      // under the cloud database's per-document size limit.
+      async function shrinkRecordIfNeeded(record) {
+        const steps = [[480, 0.45], [360, 0.35], [260, 0.3]];
+        let i = 0;
+        const keys = ['aadhaarFront', 'aadhaarBack', 'trainingSlip', 'paymentSs'];
+        while (jsonSizeBytes(record) > 230 * 1024 && i < steps.length) {
+          const w = steps[i][0];
+          const q = steps[i][1];
+          for (let k = 0; k < keys.length; k++) {
+            const key = keys[k];
+            if (record[key]) {
+              record[key] = await compressDataUrl(record[key], w, q);
+            }
+          }
+          i++;
+        }
+        return record;
+      }
+
+      function getSettings() {
+        return cachedSettings;
+      }
+
+      function saveSettings(obj) {
+        cachedSettings = Object.assign({}, DEFAULT_SETTINGS, obj);
+        if (cloudDb) {
+          cloudDb.doc('settings/main').set(obj).catch(function (err) {
+            showToast('Cloud sync failed: ' + (err && err.message ? err.message : 'try again'), 'error');
+          });
+        } else {
+          saveSettingsLocal(cachedSettings);
+        }
+        return true;
+      }
+
+      function getApplications() {
+        return cachedApplications;
+      }
+
+      async function addApplicationCloud(record) {
+        record.createdAt = Date.now();
+        cachedApplications.unshift(record);
+        updateAppCountBadges();
+        if (adminDashboardModal.style.display === 'flex') renderAdminApplications();
+        if (!cloudDb) {
+          saveApplicationsLocal(cachedApplications);
+          return;
+        }
+        try {
+          await shrinkRecordIfNeeded(record);
+          await cloudDb.collection('applications').add(record);
+        } catch (err) {
+          showToast('Could not sync this application to the cloud: ' + (err && err.message ? err.message : 'try again'), 'error');
+        }
+      }
+
+      async function deleteApplicationAt(idx) {
+        const rec = cachedApplications[idx];
+        if (!rec) return;
+        cachedApplications.splice(idx, 1);
+        updateAppCountBadges();
+        renderAdminApplications();
+        if (cloudDb && rec._id) {
+          try {
+            await cloudDb.collection('applications').doc(rec._id).delete();
+          } catch (err) {
+            showToast('Cloud delete failed: ' + (err && err.message ? err.message : 'try again'), 'error');
+          }
+        } else {
+          saveApplicationsLocal(cachedApplications);
+        }
+      }
+
+      async function clearAllApplicationsCloud() {
+        const toDelete = cachedApplications.slice();
+        cachedApplications = [];
+        updateAppCountBadges();
+        renderAdminApplications();
+        if (cloudDb) {
+          for (let i = 0; i < toDelete.length; i++) {
+            if (toDelete[i]._id) {
+              try {
+                await cloudDb.collection('applications').doc(toDelete[i]._id).delete();
+              } catch (err) { /* continue clearing the rest */ }
+            }
+          }
+        } else {
+          saveApplicationsLocal([]);
+        }
+      }
+
+      // Connects to the shared cloud database (if this viewer is
+      // granted it) so settings and applications sync across every
+      // device/browser that opens this page, instead of staying stuck
+      // on one device's local storage.
+      async function initCloudStore() {
+        try {
+          if (window.claude && typeof window.claude.use === 'function') {
+            cloudDb = await window.claude.use('db');
+          }
+        } catch (e) {
+          cloudDb = null;
+        }
+        if (!cloudDb) return;
+
+        cloudDb.doc('settings/main').onSnapshot(function (snap) {
+          cachedSettings = snap.exists
+            ? Object.assign({}, DEFAULT_SETTINGS, snap.data())
+            : Object.assign({}, DEFAULT_SETTINGS);
+          applySettingsToUI();
+        }, function () { /* keep last known settings on error */ });
+
+        cloudDb.collection('applications').orderBy('createdAt', 'desc').limit(500).onSnapshot(function (snap) {
+          cachedApplications = snap.docs.map(function (d) {
+            const data = d.data();
+            data._id = d.id;
+            return data;
+          });
+          updateAppCountBadges();
+          if (adminDashboardModal.style.display === 'flex') renderAdminApplications();
+        }, function () { /* keep last known applications on error */ });
+      }
+
+      // Compress uploaded images via HTML5 Canvas (max 800px width, JPEG quality 0.7)
+      function compressImage(file, maxWidth, quality) {
+        const targetW = maxWidth || 800;
+        const targetQ = quality || 0.7;
+        return new Promise(function (resolve, reject) {
+          const reader = new FileReader();
+          reader.onerror = function () { reject(new Error('Read failed')); };
+          reader.onload = function (ev) {
+            const img = new Image();
+            img.onerror = function () { reject(new Error('Invalid image')); };
+            img.onload = function () {
+              let w = img.width;
+              let h = img.height;
+              if (w > targetW) {
+                h = Math.round((h * targetW) / w);
+                w = targetW;
+              }
+              const canvas = document.createElement('canvas');
+              canvas.width = w;
+              canvas.height = h;
+              const ctx = canvas.getContext('2d');
+              ctx.drawImage(img, 0, 0, w, h);
+              try {
+                resolve(canvas.toDataURL('image/jpeg', targetQ));
+              } catch (err) {
+                resolve(ev.target.result);
+              }
+            };
+            img.src = ev.target.result;
+          };
+          reader.readAsDataURL(file);
+        });
+      }
+
+      // ===================================================================
+      // COMPUTED SELECTION RESOLVER
+      // ===================================================================
+      function getSelectionDetails() {
+        const svcKey = serviceSelect.value;
+        const cfg = SERVICE_CONFIG[svcKey];
+        if (!cfg) {
+          return {
+            validService: false,
+            serviceTitle: '',
+            categoryLabel: '',
+            amount: 0,
+            docType: 'none',
+            needsSubPart: false,
+            needsCategory: false,
+            isCustomAmount: false
+          };
+        }
+
+        let serviceTitle = cfg.label;
+        let categoryLabel = '';
+        let amount = cfg.fee;
+        let docType = cfg.docType;
+        let needsCategory = cfg.hasCategory;
+
+        if (cfg.hasSubParts) {
+          const partCfg = HEAVY_PARTS[selectedHeavyPart];
+          if (partCfg) {
+            serviceTitle = cfg.label + ' — ' + partCfg.label;
+            docType = partCfg.docType;
+            needsCategory = partCfg.hasCategory;
+            if (partCfg.hasCategory) {
+              amount = selectedCategory && partCfg.categoryFees[selectedCategory] ? partCfg.categoryFees[selectedCategory] : 0;
+            } else {
+              amount = partCfg.fee;
+            }
+          } else {
+            amount = 0;
+          }
+        } else if (cfg.hasCategory) {
+          amount = selectedCategory && cfg.categoryFees[selectedCategory] ? cfg.categoryFees[selectedCategory] : 0;
+        } else if (cfg.customAmount) {
+          amount = Math.max(0, Number(customAmountInput.value) || 0);
+        }
+
+        if (needsCategory && selectedCategory && CATEGORY_LABELS[selectedCategory]) {
+          categoryLabel = CATEGORY_LABELS[selectedCategory];
+        }
+
+        return {
+          validService: true,
+          svcKey: svcKey,
+          serviceTitle: serviceTitle,
+          categoryLabel: categoryLabel,
+          amount: amount,
+          docType: docType,
+          needsSubPart: cfg.hasSubParts,
+          needsCategory: needsCategory,
+          isCustomAmount: cfg.customAmount
+        };
+      }
+
+      // ===================================================================
+      // WIZARD STEP NAVIGATION & PROGRESS INDICATOR
+      // ===================================================================
+      function styleStepDot(dotEl, labelEl, state, numberText) {
+        if (state === 'completed') {
+          dotEl.className = 'w-9 h-9 rounded-full bg-emerald-600 text-white font-bold text-sm flex items-center justify-center shadow-sm transition-all';
+          dotEl.innerHTML = '<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>';
+          labelEl.className = 'text-[11px] sm:text-xs font-bold text-emerald-700 leading-tight';
+        } else if (state === 'active') {
+          dotEl.className = 'w-9 h-9 rounded-full bg-blue-700 text-white font-bold text-sm flex items-center justify-center shadow-sm ring-4 ring-blue-100 transition-all';
+          dotEl.textContent = numberText;
+          labelEl.className = 'text-[11px] sm:text-xs font-bold text-blue-700 leading-tight';
+        } else {
+          dotEl.className = 'w-9 h-9 rounded-full bg-slate-200 text-slate-500 font-bold text-sm flex items-center justify-center transition-all';
+          dotEl.textContent = numberText;
+          labelEl.className = 'text-[11px] sm:text-xs font-semibold text-slate-500 leading-tight';
+        }
+      }
+
+      function goToStep(stepNum) {
+        currentStep = stepNum;
+        setDisplay(wizardStep1, stepNum === 1 ? 'block' : 'none');
+        setDisplay(wizardStep2, stepNum === 2 ? 'block' : 'none');
+        setDisplay(wizardStep3, stepNum === 3 ? 'block' : 'none');
+
+        // Update Top Progress Indicator
+        styleStepDot(stepDot1, stepLabel1, stepNum > 1 ? 'completed' : 'active', '1');
+        styleStepDot(stepDot2, stepLabel2, stepNum > 2 ? 'completed' : (stepNum === 2 ? 'active' : 'pending'), '2');
+        styleStepDot(stepDot3, stepLabel3, stepNum === 3 ? 'active' : 'pending', '3');
+
+        stepLine1.style.width = stepNum >= 2 ? '100%' : '0%';
+        stepLine2.style.width = stepNum >= 3 ? '100%' : '0%';
+
+        if (stepNum === 2) {
+          populateStep2UI();
+        } else if (stepNum === 3) {
+          populateStep3UI();
+        }
+
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+
+      // ===================================================================
+      // STEP 1 LOGIC: SERVICE, SUB-PART, CATEGORY & LIVE SUMMARY
+      // ===================================================================
+      function highlightRadioCard(cardEl, isActive) {
+        if (!cardEl) return;
+        if (isActive) {
+          cardEl.classList.remove('border-slate-200');
+          cardEl.classList.add('border-blue-600', 'bg-blue-50/40', 'ring-2', 'ring-blue-100');
+        } else {
+          cardEl.classList.add('border-slate-200');
+          cardEl.classList.remove('border-blue-600', 'bg-blue-50/40', 'ring-2', 'ring-blue-100');
+        }
+      }
+
+      function resetHeavyPartSelection() {
+        selectedHeavyPart = '';
+        heavyPartRadios.forEach(function (r) { r.checked = false; });
+        highlightRadioCard(cardTrainingFee, false);
+        highlightRadioCard(cardRtoFee, false);
+      }
+
+      function resetCategorySelection() {
+        selectedCategory = '';
+        categoryRadios.forEach(function (r) { r.checked = false; });
+        highlightRadioCard(cardCatGenObc, false);
+        highlightRadioCard(cardCatSc, false);
+      }
+
+      function showCategoryPanel(titleText, genObcFee, scFee) {
+        categorySectionTitle.innerHTML = escapeHtml(titleText) + ' <span class="text-red-500">*</span>';
+        catGenObcPriceBadge.textContent = '₹' + formatINR(genObcFee);
+        catScPriceBadge.textContent = '₹' + formatINR(scFee);
+        setDisplay(categorySection, 'block');
+      }
+
+      function updateStep1SummaryPill() {
+        const sel = getSelectionDetails();
+        if (!sel.validService) {
+          setDisplay(step1SummaryPill, 'none');
+          return;
+        }
+
+        let title = sel.serviceTitle;
+        if (sel.categoryLabel) {
+          title += ' (' + sel.categoryLabel + ')';
+        }
+        step1SummaryTitle.textContent = title;
+
+        if (sel.needsSubPart && !selectedHeavyPart) {
+          step1SummaryDocHint.textContent = 'Please select Training Fee or RTO Fees above';
+        } else if (sel.needsCategory && !selectedCategory) {
+          step1SummaryDocHint.textContent = 'Please select General/OBC or SC category above';
+        } else if (sel.docType === 'aadhaar') {
+          step1SummaryDocHint.textContent = 'Step 2 Requirement: Aadhaar Front & Back Photo';
+        } else if (sel.docType === 'slip') {
+          step1SummaryDocHint.textContent = 'Step 2 Requirement: Training Slip Photo';
+        } else {
+          step1SummaryDocHint.textContent = 'Step 2 Requirement: No Document Upload Needed';
+        }
+
+        step1SummaryFee.textContent = sel.amount > 0 ? '₹' + formatINR(sel.amount) : '₹--';
+        setDisplay(step1SummaryPill, 'flex');
+      }
+
+      function handleServiceChange() {
+        const svcKey = serviceSelect.value;
+        const cfg = SERVICE_CONFIG[svcKey];
+
+        ['errService', 'errHeavyPart', 'errCategory', 'errCustomAmount'].forEach(function (id) {
+          setDisplay(document.getElementById(id), 'none');
+        });
+
+        setDisplay(heavyFeePartSection, 'none');
+        setDisplay(categorySection, 'none');
+        setDisplay(customAmountSection, 'none');
+
+        resetHeavyPartSelection();
+        resetCategorySelection();
+
+        if (!cfg) {
+          updateStep1SummaryPill();
+          return;
+        }
+
+        if (svcKey === 'heavy_fee') {
+          setDisplay(heavyFeePartSection, 'block');
+        } else if (svcKey === 'heavy_absent') {
+          showCategoryPanel(
+            'Heavy Licence Training Absent Fees — Select Category',
+            cfg.categoryFees.gen_obc,
+            cfg.categoryFees.sc
+          );
+        } else if (cfg.customAmount) {
+          setDisplay(customAmountSection, 'block');
+          setTimeout(function () { customAmountInput.focus(); }, 50);
+        }
+
+        updateStep1SummaryPill();
+      }
+
+      function handleHeavyPartChange(partKey) {
+        selectedHeavyPart = partKey;
+        const partCfg = HEAVY_PARTS[partKey];
+
+        setDisplay(document.getElementById('errHeavyPart'), 'none');
+        setDisplay(document.getElementById('errCategory'), 'none');
+        highlightRadioCard(cardTrainingFee, partKey === 'training_fee');
+        highlightRadioCard(cardRtoFee, partKey === 'rto_fee');
+        resetCategorySelection();
+
+        if (partCfg && partCfg.hasCategory) {
+          showCategoryPanel(
+            'Training Fee with Learner Licence — Select Category',
+            partCfg.categoryFees.gen_obc,
+            partCfg.categoryFees.sc
+          );
+        } else {
+          setDisplay(categorySection, 'none');
+        }
+
+        updateStep1SummaryPill();
+      }
+
+      function handleCategoryChange(catKey) {
+        selectedCategory = catKey;
+        setDisplay(document.getElementById('errCategory'), 'none');
+        highlightRadioCard(cardCatGenObc, catKey === 'gen_obc');
+        highlightRadioCard(cardCatSc, catKey === 'sc');
+        updateStep1SummaryPill();
+      }
+
+      function validateStep1() {
+        ['errName', 'errMobile', 'errService', 'errHeavyPart', 'errCategory', 'errCustomAmount'].forEach(function (id) {
+          setDisplay(document.getElementById(id), 'none');
+        });
+
+        const nameVal = customerName.value.trim();
+        const mobileVal = customerMobile.value.trim();
+        const sel = getSelectionDetails();
+        let valid = true;
+
+        if (nameVal.length < 2) {
+          setDisplay(document.getElementById('errName'), 'block');
+          valid = false;
+        }
+        if (!/^\d{10}$/.test(mobileVal)) {
+          setDisplay(document.getElementById('errMobile'), 'block');
+          valid = false;
+        }
+        if (!sel.validService) {
+          setDisplay(document.getElementById('errService'), 'block');
+          valid = false;
+        }
+        if (sel.needsSubPart && !selectedHeavyPart) {
+          setDisplay(document.getElementById('errHeavyPart'), 'block');
+          valid = false;
+        }
+        if (sel.needsCategory && !selectedCategory) {
+          setDisplay(document.getElementById('errCategory'), 'block');
+          valid = false;
+        }
+        if (sel.isCustomAmount && sel.amount < 1) {
+          setDisplay(document.getElementById('errCustomAmount'), 'block');
+          valid = false;
+        }
+
+        if (!valid) {
+          showToast('Please fill all required details in Step 1.', 'error');
+        }
+        return valid;
+      }
+
+      // ===================================================================
+      // STEP 2 LOGIC: DYNAMIC FILE UPLOAD BLOCKS
+      // ===================================================================
+      function populateStep2UI() {
+        const sel = getSelectionDetails();
+        step2ServiceBadge.textContent = sel.serviceTitle;
+
+        setDisplay(document.getElementById('errAadhaarFront'), 'none');
+        setDisplay(document.getElementById('errAadhaarBack'), 'none');
+        setDisplay(document.getElementById('errSlipPhoto'), 'none');
+
+        setDisplay(step2AadhaarBlock, sel.docType === 'aadhaar' ? 'grid' : 'none');
+        setDisplay(step2SlipBlock, sel.docType === 'slip' ? 'block' : 'none');
+        setDisplay(step2NoDocBlock, sel.docType === 'none' ? 'block' : 'none');
+
+        if (sel.docType === 'aadhaar') {
+          step2Subtitle.textContent = 'Aadhaar Card ki saaf Front aur Back dono photo upload karein (Required)';
+        } else if (sel.docType === 'slip') {
+          step2Subtitle.textContent = 'Apni Training Slip ki saaf photo upload karein (Required)';
+        } else {
+          step2Subtitle.textContent = 'Is service ke liye koi document required nahi hai';
+        }
+      }
+
+      function validateStep2() {
+        const sel = getSelectionDetails();
+        setDisplay(document.getElementById('errAadhaarFront'), 'none');
+        setDisplay(document.getElementById('errAadhaarBack'), 'none');
+        setDisplay(document.getElementById('errSlipPhoto'), 'none');
+
+        let valid = true;
+        if (sel.docType === 'aadhaar') {
+          if (!uploadedImages.aadhaarFront) {
+            setDisplay(document.getElementById('errAadhaarFront'), 'block');
+            valid = false;
+          }
+          if (!uploadedImages.aadhaarBack) {
+            setDisplay(document.getElementById('errAadhaarBack'), 'block');
+            valid = false;
+          }
+        } else if (sel.docType === 'slip') {
+          if (!uploadedImages.trainingSlip) {
+            setDisplay(document.getElementById('errSlipPhoto'), 'block');
+            valid = false;
+          }
+        }
+
+        if (!valid) {
+          showToast('Please upload the required document photo(s) to continue.', 'error');
+        }
+        return valid;
+      }
+
+      // ===================================================================
+      // STEP 3 LOGIC: SUMMARY & DYNAMIC UPI QR CODE
+      // ===================================================================
+      function renderQrInto(container, dataText) {
+        container.innerHTML = '';
+        if (typeof QRCode === 'undefined') return false;
+        try {
+          new QRCode(container, {
+            text: dataText,
+            width: 192,
+            height: 192,
+            colorDark: '#0f172a',
+            colorLight: '#ffffff',
+            correctLevel: QRCode.CorrectLevel.M
+          });
+          const img = container.querySelector('img');
+          if (img) { img.style.width = '100%'; img.style.height = '100%'; img.style.objectFit = 'contain'; }
+          const canvas = container.querySelector('canvas');
+          if (canvas) { canvas.style.width = '100%'; canvas.style.height = '100%'; }
+          return true;
+        } catch (e) {
+          return false;
+        }
+      }
+
+      function updateQrCode(amountValue) {
+        const settings = getSettings();
+        const amt = Number(amountValue) || 0;
+
+        if (settings.customQr) {
+          qrBadgeLabel.textContent = amt > 0 ? 'Scan & Pay ₹' + formatINR(amt) : 'Official Shop QR';
+          upiQrImage.innerHTML = '<img src="' + settings.customQr + '" alt="Shop UPI QR Code" class="w-full h-full object-contain rounded-lg" />';
+          setDisplay(upiQrImage, 'flex');
+          setDisplay(qrFallbackSvg, 'none');
+          if (openUpiAppBtn) setDisplay(openUpiAppBtn, 'none');
+          return;
+        }
+
+        const pa = encodeURIComponent((settings.upiId || DEFAULT_SETTINGS.upiId).trim());
+        const pn = encodeURIComponent((settings.shopName || DEFAULT_SETTINGS.shopName).trim());
+        let upiUri = 'upi://pay?pa=' + pa + '&pn=' + pn + '&cu=INR';
+        if (amt > 0) {
+          upiUri += '&am=' + encodeURIComponent(amt);
+          qrBadgeLabel.textContent = 'Scan to Pay ₹' + formatINR(amt);
+        } else {
+          qrBadgeLabel.textContent = 'Scan & Pay via UPI';
+        }
+
+        const ok = renderQrInto(upiQrImage, upiUri);
+        setDisplay(upiQrImage, ok ? 'flex' : 'none');
+        setDisplay(qrFallbackSvg, ok ? 'none' : 'block');
+
+        if (openUpiAppBtn) {
+          openUpiAppBtn.href = upiUri;
+          setDisplay(openUpiAppBtn, 'inline-flex');
+        }
+      }
+
+      function populateStep3UI() {
+        const sel = getSelectionDetails();
+        step3SummaryName.textContent = customerName.value.trim();
+        step3SummaryMobile.textContent = '+91 ' + customerMobile.value.trim();
+        step3SummaryService.textContent = sel.serviceTitle;
+        step3PayableAmount.textContent = '₹' + formatINR(sel.amount);
+
+        if (sel.categoryLabel) {
+          step3SummaryCategory.textContent = 'Category: ' + sel.categoryLabel;
+          setDisplay(step3SummaryCategory, 'block');
+        } else {
+          setDisplay(step3SummaryCategory, 'none');
+        }
+
+        if (sel.docType === 'aadhaar') {
+          step3SummaryDocs.textContent = 'Aadhaar Front & Back Attached';
+        } else if (sel.docType === 'slip') {
+          step3SummaryDocs.textContent = 'Training Slip Attached';
+        } else {
+          step3SummaryDocs.textContent = 'Not Required';
+        }
+
+        updateQrCode(sel.amount);
+      }
+
+      // ===================================================================
+      // BIND WIZARD BUTTONS & FORM INPUTS
+      // ===================================================================
+      document.getElementById('nextToStep2Btn').addEventListener('click', function () {
+        if (validateStep1()) goToStep(2);
+      });
+
+      document.getElementById('backToStep1Btn').addEventListener('click', function () {
+        goToStep(1);
+      });
+
+      document.getElementById('nextToStep3Btn').addEventListener('click', function () {
+        if (validateStep2()) goToStep(3);
+      });
+
+      document.getElementById('backToStep2Btn').addEventListener('click', function () {
+        goToStep(2);
+      });
+
+      serviceSelect.addEventListener('change', handleServiceChange);
+
+      heavyPartRadios.forEach(function (radio) {
+        radio.addEventListener('change', function () {
+          if (radio.checked) handleHeavyPartChange(radio.value);
+        });
+      });
+
+      categoryRadios.forEach(function (radio) {
+        radio.addEventListener('change', function () {
+          if (radio.checked) handleCategoryChange(radio.value);
+        });
+      });
+
+      customAmountInput.addEventListener('input', function () {
+        setDisplay(document.getElementById('errCustomAmount'), 'none');
+        updateStep1SummaryPill();
+      });
+
+      customerMobile.addEventListener('input', function () {
+        customerMobile.value = customerMobile.value.replace(/\D/g, '').slice(0, 10);
+        setDisplay(document.getElementById('errMobile'), 'none');
+      });
+
+      customerName.addEventListener('input', function () {
+        setDisplay(document.getElementById('errName'), 'none');
+      });
+
+      // ===================================================================
+      // IMAGE UPLOAD HANDLERS (Aadhaar Front/Back, Training Slip, Payment SS)
+      // ===================================================================
+      function setupImageUploader(config) {
+        const box = document.getElementById(config.boxId);
+        const input = document.getElementById(config.inputId);
+        const emptyState = document.getElementById(config.emptyId);
+        const previewState = document.getElementById(config.previewId);
+        const previewImg = document.getElementById(config.imgId);
+        const fileNameEl = document.getElementById(config.nameId);
+        const removeBtn = document.getElementById(config.removeId);
+        const errEl = config.errId ? document.getElementById(config.errId) : null;
+
+        if (!box || !input) return;
+
+        box.addEventListener('click', function (e) {
+          if (e.target.closest('button')) return;
+          input.click();
+        });
+
+        input.addEventListener('change', function () {
+          const file = input.files && input.files[0];
+          if (!file) return;
+          if (!file.type.startsWith('image/')) {
+            showToast('Please select a valid image file (JPG/PNG).', 'error');
+            return;
+          }
+          compressImage(file, 640, 0.55).then(function (dataUrl) {
+            uploadedImages[config.stateKey] = dataUrl;
+            previewImg.src = dataUrl;
+            fileNameEl.textContent = file.name;
+            setDisplay(emptyState, 'none');
+            setDisplay(previewState, config.previewDisplay || 'block');
+            if (errEl) setDisplay(errEl, 'none');
+          }).catch(function () {
+            showToast('Could not read image. Please try another photo.', 'error');
+          });
+        });
+
+        if (removeBtn) {
+          removeBtn.addEventListener('click', function (e) {
+            e.stopPropagation();
+            uploadedImages[config.stateKey] = '';
+            input.value = '';
+            previewImg.src = '';
+            setDisplay(previewState, 'none');
+            setDisplay(emptyState, config.emptyDisplay || 'flex');
+          });
+        }
+      }
+
+      setupImageUploader({
+        boxId: 'frontUploadBox',
+        inputId: 'aadhaarFrontInput',
+        emptyId: 'frontEmptyState',
+        previewId: 'frontPreviewState',
+        imgId: 'frontPreviewImg',
+        nameId: 'frontFileName',
+        removeId: 'frontRemoveBtn',
+        errId: 'errAadhaarFront',
+        stateKey: 'aadhaarFront',
+        emptyDisplay: 'flex',
+        previewDisplay: 'block'
+      });
+
+      setupImageUploader({
+        boxId: 'backUploadBox',
+        inputId: 'aadhaarBackInput',
+        emptyId: 'backEmptyState',
+        previewId: 'backPreviewState',
+        imgId: 'backPreviewImg',
+        nameId: 'backFileName',
+        removeId: 'backRemoveBtn',
+        errId: 'errAadhaarBack',
+        stateKey: 'aadhaarBack',
+        emptyDisplay: 'flex',
+        previewDisplay: 'block'
+      });
+
+      setupImageUploader({
+        boxId: 'slipUploadBox',
+        inputId: 'slipPhotoInput',
+        emptyId: 'slipEmptyState',
+        previewId: 'slipPreviewState',
+        imgId: 'slipPreviewImg',
+        nameId: 'slipFileName',
+        removeId: 'slipRemoveBtn',
+        errId: 'errSlipPhoto',
+        stateKey: 'trainingSlip',
+        emptyDisplay: 'flex',
+        previewDisplay: 'block'
+      });
+
+      setupImageUploader({
+        boxId: 'paySsUploadBox',
+        inputId: 'paySsInput',
+        emptyId: 'paySsEmptyState',
+        previewId: 'paySsPreviewState',
+        imgId: 'paySsPreviewImg',
+        nameId: 'paySsFileName',
+        removeId: 'paySsRemoveBtn',
+        errId: null,
+        stateKey: 'paymentSs',
+        emptyDisplay: 'flex',
+        previewDisplay: 'flex'
+      });
+
+      // ===================================================================
+      // COPY UPI ID (iFrame-safe document.execCommand)
+      // ===================================================================
+      document.getElementById('copyUpiBtn').addEventListener('click', function () {
+        const upiText = displayUpiId.textContent.trim();
+        const ta = document.createElement('textarea');
+        ta.value = upiText;
+        ta.setAttribute('readonly', '');
+        ta.style.position = 'fixed';
+        ta.style.left = '-9999px';
+        document.body.appendChild(ta);
+        ta.select();
+        try {
+          document.execCommand('copy');
+          showToast('UPI ID copied: ' + upiText, 'success');
+        } catch (err) {
+          showToast('Please copy manually: ' + upiText, 'info');
+        }
+        document.body.removeChild(ta);
+      });
+
+      // ===================================================================
+      // FINAL SUBMISSION & INSTANT DIGITAL RECEIPT
+      // ===================================================================
+      applicationForm.addEventListener('submit', function (e) {
+        e.preventDefault();
+        if (!validateStep1()) {
+          goToStep(1);
+          return;
+        }
+        if (!validateStep2()) {
+          goToStep(2);
+          return;
+        }
+
+        const sel = getSelectionDetails();
+        const year = new Date().getFullYear();
+        const rand4 = Math.floor(1000 + Math.random() * 9000);
+        const refId = 'DSK-' + year + '-' + rand4;
+        const dateStr = new Date().toLocaleString('en-IN', {
+          day: '2-digit',
+          month: 'short',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: true
+        });
+
+        let docsSummaryText = 'No Document Required';
+        if (sel.docType === 'aadhaar') docsSummaryText = 'Aadhaar Front & Back Uploaded';
+        else if (sel.docType === 'slip') docsSummaryText = 'Training Slip Uploaded';
+        if (uploadedImages.paymentSs) docsSummaryText += ' + Payment SS';
+
+        const record = {
+          refId: refId,
+          date: dateStr,
+          name: customerName.value.trim(),
+          mobile: customerMobile.value.trim(),
+          service: sel.serviceTitle,
+          category: sel.categoryLabel,
+          amount: sel.amount,
+          docsStatus: docsSummaryText,
+          aadhaarFront: sel.docType === 'aadhaar' ? uploadedImages.aadhaarFront : '',
+          aadhaarBack: sel.docType === 'aadhaar' ? uploadedImages.aadhaarBack : '',
+          trainingSlip: sel.docType === 'slip' ? uploadedImages.trainingSlip : '',
+          paymentSs: uploadedImages.paymentSs || ''
+        };
+
+        addApplicationCloud(record);
+
+        lastReceiptRecord = record;
+
+        // Populate Digital Receipt Modal
+        document.getElementById('recRefId').textContent = record.refId;
+        document.getElementById('recDate').textContent = record.date;
+        document.getElementById('recName').textContent = record.name;
+        document.getElementById('recMobile').textContent = '+91 ' + record.mobile;
+        document.getElementById('recService').textContent = record.service;
+        document.getElementById('recAmount').textContent = '₹' + formatINR(record.amount);
+        document.getElementById('recDocsStatus').textContent = record.docsStatus;
+
+        const recCategoryRow = document.getElementById('recCategoryRow');
+        const recCategory = document.getElementById('recCategory');
+        if (record.category) {
+          recCategory.textContent = record.category;
+          setDisplay(recCategoryRow, 'flex');
+        } else {
+          setDisplay(recCategoryRow, 'none');
+        }
+
+        setDisplay(receiptModal, 'flex');
+        showToast('Application submitted successfully!', 'success');
+      });
+
+      // Receipt Modal Buttons
+      document.getElementById('receiptPrintBtn').addEventListener('click', function () {
+        window.print();
+      });
+
+      document.getElementById('receiptWhatsappBtn').addEventListener('click', function () {
+        if (!lastReceiptRecord) return;
+        const settings = getSettings();
+        const ownerWa = String(settings.whatsapp || DEFAULT_SETTINGS.whatsapp).replace(/\D/g, '').slice(-10);
+        const lines = [
+          '*' + settings.shopName + ' — Digital Receipt*',
+          'Ref ID: *' + lastReceiptRecord.refId + '*',
+          'Date: ' + lastReceiptRecord.date,
+          'Name: ' + lastReceiptRecord.name,
+          'Mobile: +91 ' + lastReceiptRecord.mobile,
+          'Service: *' + lastReceiptRecord.service + '*'
+        ];
+        if (lastReceiptRecord.category) {
+          lines.push('Category: *' + lastReceiptRecord.category + '*');
+        }
+        lines.push('Amount Paid: *₹' + formatINR(lastReceiptRecord.amount) + '*');
+        lines.push('Documents: ' + lastReceiptRecord.docsStatus);
+
+        window.open('https://wa.me/91' + ownerWa + '?text=' + encodeURIComponent(lines.join('\n')), '_blank', 'noopener,noreferrer');
+      });
+
+      function resetFullWizard() {
+        applicationForm.reset();
+        uploadedImages.aadhaarFront = '';
+        uploadedImages.aadhaarBack = '';
+        uploadedImages.trainingSlip = '';
+        uploadedImages.paymentSs = '';
+
+        [
+          { prev: 'frontPreviewState', empty: 'frontEmptyState', img: 'frontPreviewImg', input: 'aadhaarFrontInput' },
+          { prev: 'backPreviewState', empty: 'backEmptyState', img: 'backPreviewImg', input: 'aadhaarBackInput' },
+          { prev: 'slipPreviewState', empty: 'slipEmptyState', img: 'slipPreviewImg', input: 'slipPhotoInput' },
+          { prev: 'paySsPreviewState', empty: 'paySsEmptyState', img: 'paySsPreviewImg', input: 'paySsInput' }
+        ].forEach(function (item) {
+          const imgEl = document.getElementById(item.img);
+          const inpEl = document.getElementById(item.input);
+          if (imgEl) imgEl.src = '';
+          if (inpEl) inpEl.value = '';
+          setDisplay(document.getElementById(item.prev), 'none');
+          setDisplay(document.getElementById(item.empty), 'flex');
+        });
+
+        handleServiceChange();
+        goToStep(1);
+      }
+
+      document.getElementById('receiptNewBtn').addEventListener('click', function () {
+        setDisplay(receiptModal, 'none');
+        resetFullWizard();
+      });
+
+      // ===================================================================
+      // APPLY SETTINGS & BADGES
+      // ===================================================================
+      function updateAppCountBadges() {
+        const count = getApplications().length;
+        const tabAppsCount = document.getElementById('tabAppsCount');
+        if (tabAppsCount) tabAppsCount.textContent = String(count);
+        if (count > 0) {
+          headerAppCount.textContent = String(count);
+          setDisplay(headerAppCount, 'inline-block');
+        } else {
+          setDisplay(headerAppCount, 'none');
+        }
+      }
+
+      function applySettingsToUI() {
+        const settings = getSettings();
+        headerShopName.textContent = settings.shopName;
+        footerShopName.textContent = settings.shopName;
+        document.getElementById('receiptShopHeader').textContent = settings.shopName + ' — Digital Receipt';
+        displayUpiId.textContent = settings.upiId;
+        footerWhatsapp.textContent = '+91 ' + settings.whatsapp;
+        if (currentStep === 3) {
+          updateQrCode(getSelectionDetails().amount);
+        }
+        updateAppCountBadges();
+      }
+
+      // ===================================================================
+      // PASSWORD-PROTECTED ADMIN PANEL (admin / 0087)
+      // ===================================================================
+      const openAdminBtn = document.getElementById('openAdminBtn');
+      const closeLoginModalBtn = document.getElementById('closeLoginModalBtn');
+      const adminLoginForm = document.getElementById('adminLoginForm');
+      const adminUsernameInput = document.getElementById('adminUsernameInput');
+      const adminPasswordInput = document.getElementById('adminPasswordInput');
+      const adminLoginError = document.getElementById('adminLoginError');
+
+      const closeAdminDashboardBtn = document.getElementById('closeAdminDashboardBtn');
+      const adminLogoutBtn = document.getElementById('adminLogoutBtn');
+      const tabAppsBtn = document.getElementById('tabAppsBtn');
+      const tabSettingsBtn = document.getElementById('tabSettingsBtn');
+      const tabAppsPanel = document.getElementById('tabAppsPanel');
+      const tabSettingsPanel = document.getElementById('tabSettingsPanel');
+      const adminSearchInput = document.getElementById('adminSearchInput');
+
+      function switchAdminTab(tabName) {
+        if (tabName === 'apps') {
+          setDisplay(tabAppsPanel, 'block');
+          setDisplay(tabSettingsPanel, 'none');
+          tabAppsBtn.classList.add('text-blue-700', 'border-blue-700', 'font-bold');
+          tabAppsBtn.classList.remove('text-slate-500', 'border-transparent', 'font-semibold');
+          tabSettingsBtn.classList.remove('text-blue-700', 'border-blue-700', 'font-bold');
+          tabSettingsBtn.classList.add('text-slate-500', 'border-transparent', 'font-semibold');
+          renderAdminApplications();
+        } else {
+          setDisplay(tabAppsPanel, 'none');
+          setDisplay(tabSettingsPanel, 'block');
+          tabSettingsBtn.classList.add('text-blue-700', 'border-blue-700', 'font-bold');
+          tabSettingsBtn.classList.remove('text-slate-500', 'border-transparent', 'font-semibold');
+          tabAppsBtn.classList.remove('text-blue-700', 'border-blue-700', 'font-bold');
+          tabAppsBtn.classList.add('text-slate-500', 'border-transparent', 'font-semibold');
+        }
+      }
+
+      function openAdminDashboard() {
+        const settings = getSettings();
+        document.getElementById('settingShopName').value = settings.shopName;
+        document.getElementById('settingWhatsapp').value = settings.whatsapp;
+        document.getElementById('settingUpiId').value = settings.upiId;
+        tempSettingsQr = settings.customQr || '';
+
+        const qrPrev = document.getElementById('settingQrPreview');
+        const qrPh = document.getElementById('settingQrPlaceholder');
+        if (tempSettingsQr) {
+          qrPrev.src = tempSettingsQr;
+          setDisplay(qrPrev, 'block');
+          setDisplay(qrPh, 'none');
+        } else {
+          qrPrev.src = '';
+          setDisplay(qrPrev, 'none');
+          setDisplay(qrPh, 'block');
+        }
+
+        adminSearchInput.value = '';
+        switchAdminTab('apps');
+        setDisplay(adminDashboardModal, 'flex');
+      }
+
+      openAdminBtn.addEventListener('click', function () {
+        if (isAdminLoggedIn) {
+          openAdminDashboard();
+        } else {
+          adminLoginForm.reset();
+          setDisplay(adminLoginError, 'none');
+          setDisplay(adminLoginModal, 'flex');
+          setTimeout(function () { adminUsernameInput.focus(); }, 50);
+        }
+      });
+
+      closeLoginModalBtn.addEventListener('click', function () {
+        setDisplay(adminLoginModal, 'none');
+      });
+
+      adminLoginForm.addEventListener('submit', function (e) {
+        e.preventDefault();
+        const u = adminUsernameInput.value.trim();
+        const p = adminPasswordInput.value.trim();
+        if (u === ADMIN_USERNAME && p === ADMIN_PASSWORD) {
+          isAdminLoggedIn = true;
+          setDisplay(adminLoginError, 'none');
+          setDisplay(adminLoginModal, 'none');
+          showToast('Admin Panel unlocked!', 'success');
+          openAdminDashboard();
+        } else {
+          setDisplay(adminLoginError, 'block');
+          adminPasswordInput.value = '';
+          adminPasswordInput.focus();
+        }
+      });
+
+      closeAdminDashboardBtn.addEventListener('click', function () {
+        setDisplay(adminDashboardModal, 'none');
+      });
+
+      adminLogoutBtn.addEventListener('click', function () {
+        isAdminLoggedIn = false;
+        setDisplay(adminDashboardModal, 'none');
+        showToast('Logged out of Admin Panel.', 'info');
+      });
+
+      tabAppsBtn.addEventListener('click', function () { switchAdminTab('apps'); });
+      tabSettingsBtn.addEventListener('click', function () { switchAdminTab('settings'); });
+
+      // ===================================================================
+      // ADMIN TAB 1: APPLICATIONS LIST, LIGHTBOX & DELETE
+      // ===================================================================
+      function renderAdminApplications() {
+        const listEl = document.getElementById('adminAppsList');
+        const clearBtn = document.getElementById('clearAllAppsBtn');
+        setDisplay(document.getElementById('clearConfirmBox'), 'none');
+
+        const allApps = getApplications();
+        const query = adminSearchInput.value.trim().toLowerCase();
+
+        const filtered = allApps.map(function (app, originalIndex) {
+          return { app: app, originalIndex: originalIndex };
+        }).filter(function (entry) {
+          if (!query) return true;
+          const a = entry.app;
+          return (
+            String(a.name || '').toLowerCase().includes(query) ||
+            String(a.mobile || '').toLowerCase().includes(query) ||
+            String(a.refId || '').toLowerCase().includes(query) ||
+            String(a.service || '').toLowerCase().includes(query) ||
+            String(a.category || '').toLowerCase().includes(query)
+          );
+        });
+
+        setDisplay(clearBtn, allApps.length > 0 ? 'inline-block' : 'none');
+
+        if (filtered.length === 0) {
+          listEl.innerHTML =
+            '<div class="text-center py-10 bg-slate-50 rounded-2xl border border-dashed border-slate-300">' +
+            '<p class="text-sm font-semibold text-slate-600">' + (allApps.length === 0 ? 'No applications submitted yet.' : 'No matching applications found.') + '</p>' +
+            '</div>';
+          return;
+        }
+
+        listEl.innerHTML = filtered.map(function (entry) {
+          const app = entry.app;
+          const idx = entry.originalIndex;
+          const thumbs = [];
+
+          if (app.aadhaarFront) {
+            thumbs.push('<button type="button" data-doc="aadhaarFront" data-idx="' + idx + '" class="doc-thumb-btn inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white hover:bg-blue-50 border border-slate-200 text-xs font-semibold text-slate-700 cursor-pointer"><img src="' + app.aadhaarFront + '" alt="Front" class="w-5 h-5 object-cover rounded" />Aadhaar Front</button>');
+          }
+          if (app.aadhaarBack) {
+            thumbs.push('<button type="button" data-doc="aadhaarBack" data-idx="' + idx + '" class="doc-thumb-btn inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white hover:bg-blue-50 border border-slate-200 text-xs font-semibold text-slate-700 cursor-pointer"><img src="' + app.aadhaarBack + '" alt="Back" class="w-5 h-5 object-cover rounded" />Aadhaar Back</button>');
+          }
+          if (app.trainingSlip) {
+            thumbs.push('<button type="button" data-doc="trainingSlip" data-idx="' + idx + '" class="doc-thumb-btn inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white hover:bg-indigo-50 border border-indigo-200 text-xs font-semibold text-indigo-700 cursor-pointer"><img src="' + app.trainingSlip + '" alt="Slip" class="w-5 h-5 object-cover rounded" />Training Slip</button>');
+          }
+          if (app.paymentSs) {
+            thumbs.push('<button type="button" data-doc="paymentSs" data-idx="' + idx + '" class="doc-thumb-btn inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white hover:bg-emerald-50 border border-emerald-200 text-xs font-semibold text-emerald-700 cursor-pointer"><img src="' + app.paymentSs + '" alt="Payment" class="w-5 h-5 object-cover rounded" />Payment SS</button>');
+          }
+          if (thumbs.length === 0) {
+            thumbs.push('<span class="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-500 text-xs font-medium">No documents attached</span>');
+          }
+
+          const categoryBadge = app.category
+            ? '<span class="px-2 py-0.5 rounded-md bg-indigo-100 text-indigo-800 text-[11px] font-bold">' + escapeHtml(app.category) + '</span>'
+            : '';
+
+          return (
+            '<div class="bg-slate-50 rounded-2xl p-4 border border-slate-200 space-y-3">' +
+              '<div class="flex flex-wrap items-start justify-between gap-2">' +
+                '<div>' +
+                  '<div class="flex items-center gap-2 flex-wrap">' +
+                    '<span class="px-2 py-0.5 rounded-md bg-blue-100 text-blue-800 text-xs font-bold">' + escapeHtml(app.refId) + '</span>' +
+                    categoryBadge +
+                    '<span class="text-xs text-slate-500">' + escapeHtml(app.date) + '</span>' +
+                  '</div>' +
+                  '<h4 class="text-base font-bold text-slate-900 mt-1">' + escapeHtml(app.name) + '</h4>' +
+                  '<p class="text-xs text-slate-600 font-medium">+91 ' + escapeHtml(app.mobile) + ' &bull; <span class="text-blue-700 font-semibold">' + escapeHtml(app.service) + '</span></p>' +
+                '</div>' +
+                '<span class="px-3 py-1 rounded-lg bg-emerald-100 text-emerald-800 text-sm font-extrabold">₹' + escapeHtml(formatINR(app.amount)) + '</span>' +
+              '</div>' +
+              '<div class="flex flex-wrap items-center justify-between gap-2 pt-1">' +
+                '<div class="flex flex-wrap items-center gap-2">' + thumbs.join('') + '</div>' +
+                '<button type="button" data-del-idx="' + idx + '" class="del-app-btn px-2.5 py-1 rounded-lg text-xs font-semibold text-red-600 hover:bg-red-50 cursor-pointer">Delete</button>' +
+              '</div>' +
+            '</div>'
+          );
+        }).join('');
+
+        // Lightbox Preview Handlers
+        listEl.querySelectorAll('.doc-thumb-btn').forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            const idx = Number(btn.getAttribute('data-idx'));
+            const docKey = btn.getAttribute('data-doc');
+            const rec = allApps[idx];
+            if (!rec || !rec[docKey]) return;
+            const titles = {
+              aadhaarFront: rec.name + ' — Aadhaar Front',
+              aadhaarBack: rec.name + ' — Aadhaar Back',
+              trainingSlip: rec.name + ' — Training Slip',
+              paymentSs: rec.name + ' — Payment Screenshot'
+            };
+            document.getElementById('lightboxTitle').textContent = titles[docKey] || 'Document Preview';
+            document.getElementById('lightboxImg').src = rec[docKey];
+            setDisplay(lightboxModal, 'flex');
+          });
+        });
+
+        // Delete Per Record Handlers
+        listEl.querySelectorAll('.del-app-btn').forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            const idx = Number(btn.getAttribute('data-del-idx'));
+            deleteApplicationAt(idx);
+            showToast('Application deleted.', 'info');
+          });
+        });
+      }
+
+      adminSearchInput.addEventListener('input', renderAdminApplications);
+
+      document.getElementById('clearAllAppsBtn').addEventListener('click', function () {
+        setDisplay(document.getElementById('clearConfirmBox'), 'flex');
+      });
+      document.getElementById('confirmClearNoBtn').addEventListener('click', function () {
+        setDisplay(document.getElementById('clearConfirmBox'), 'none');
+      });
+      document.getElementById('confirmClearYesBtn').addEventListener('click', function () {
+        setDisplay(document.getElementById('clearConfirmBox'), 'none');
+        clearAllApplicationsCloud();
+        showToast('All applications cleared.', 'info');
+      });
+
+      // ===================================================================
+      // ADMIN TAB 2: OWNER SETTINGS & CUSTOM QR
+      // ===================================================================
+      const settingQrInput = document.getElementById('settingQrInput');
+
+      document.getElementById('settingQrUploadBtn').addEventListener('click', function () {
+        settingQrInput.click();
+      });
+
+      settingQrInput.addEventListener('change', function () {
+        const file = settingQrInput.files && settingQrInput.files[0];
+        if (!file || !file.type.startsWith('image/')) {
+          showToast('Please select a valid QR image.', 'error');
+          return;
+        }
+        compressImage(file, 600, 0.85).then(function (dataUrl) {
+          tempSettingsQr = dataUrl;
+          const prev = document.getElementById('settingQrPreview');
+          prev.src = dataUrl;
+          setDisplay(prev, 'block');
+          setDisplay(document.getElementById('settingQrPlaceholder'), 'none');
+          showToast('QR image ready! Click Save Settings.', 'info');
+        }).catch(function () {
+          showToast('Failed to load QR image.', 'error');
+        });
+      });
+
+      document.getElementById('settingQrResetBtn').addEventListener('click', function () {
+        tempSettingsQr = '';
+        settingQrInput.value = '';
+        const prev = document.getElementById('settingQrPreview');
+        prev.src = '';
+        setDisplay(prev, 'none');
+        setDisplay(document.getElementById('settingQrPlaceholder'), 'block');
+        showToast('Custom QR removed. Click Save Settings.', 'info');
+      });
+
+      document.getElementById('saveSettingsBtn').addEventListener('click', function () {
+        const shopName = document.getElementById('settingShopName').value.trim() || DEFAULT_SETTINGS.shopName;
+        const whatsapp = document.getElementById('settingWhatsapp').value.replace(/\D/g, '').slice(-10) || DEFAULT_SETTINGS.whatsapp;
+        const upiId = document.getElementById('settingUpiId').value.trim() || DEFAULT_SETTINGS.upiId;
+
+        if (saveSettings({ shopName: shopName, whatsapp: whatsapp, upiId: upiId, customQr: tempSettingsQr })) {
+          applySettingsToUI();
+          showToast('Settings saved successfully!', 'success');
+        }
+      });
+
+      // ===================================================================
+      // MODAL BACKDROP & ESCAPE KEY CLOSING
+      // ===================================================================
+      document.getElementById('closeLightboxBtn').addEventListener('click', function () {
+        setDisplay(lightboxModal, 'none');
+      });
+
+      [adminLoginModal, adminDashboardModal, lightboxModal].forEach(function (modalEl) {
+        modalEl.addEventListener('click', function (e) {
+          if (e.target === modalEl) setDisplay(modalEl, 'none');
+        });
+      });
+
+      document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') {
+          if (lightboxModal.style.display === 'flex') setDisplay(lightboxModal, 'none');
+          else if (adminLoginModal.style.display === 'flex') setDisplay(adminLoginModal, 'none');
+          else if (adminDashboardModal.style.display === 'flex') setDisplay(adminDashboardModal, 'none');
+          else if (receiptModal.style.display === 'flex') setDisplay(receiptModal, 'none');
+        }
+      });
+
+      // ===================================================================
+      // INITIALIZE 3-STEP PORTAL
+      // ===================================================================
+      handleServiceChange();
+      applySettingsToUI();
+      goToStep(1);
+      initCloudStore();
+    });
+  </script>
+</body>
+</html>
